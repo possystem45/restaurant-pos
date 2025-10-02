@@ -404,7 +404,7 @@ const OrderSummary = memo(function OrderSummary({
                     {/* Current Bill Section */}
                     <div className="w-96  bg-white rounded-lg p-3 sm:p-4 border border-gray-200 flex flex-col order-first lg:order-last">
                         <div className="flex justify-between items-center mb-2 sm:mb-3">
-                            <h3 className="text-base sm:text-lg font-semibold text-other1">Current</h3>
+                            <h3 className="text-base sm:text-lg font-semibold text-other1">Current Bill</h3>
                         </div>
                         
                         {!billStatus.hasItems ? (
