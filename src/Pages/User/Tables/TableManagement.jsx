@@ -695,7 +695,7 @@ export default function TableManagement({tableList = []}) {
             </div>
 
             {/* for order summary */}
-            <div className='p-3 sm:p-4 lg:p-6 w-full lg:flex-1 overflow-hidden bg-fourthColor rounded-2xl sm:rounded-[32px]'>
+            <div className='p-3 sm:p-4 lg:p-6 lg:flex-1 overflow-hidden bg-fourthColor rounded-2xl sm:rounded-[32px]'>
                 <OrderSummary
                     selectedTable={selectedTable}
                     bill={currentBill}
