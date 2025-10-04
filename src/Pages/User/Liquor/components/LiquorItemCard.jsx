@@ -65,12 +65,30 @@ const LiquorItemCard = React.memo(({
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <div className="text-sm text-gray-600">Price per {item.type === 'bites' ? 'plate' : item.unit || 'unit'}</div>
-                        <div className="text-lg font-semibold text-green-600">
-                            LKR {typeof item.pricePerUnit === 'number' ? 
-                                Number(item.pricePerUnit).toFixed(2) : 
-                                typeof item.pricePerPlate === 'number' ? 
-                                Number(item.pricePerPlate).toFixed(2) :
-                                (item.pricePerBottle || 0).toFixed(2)}
+                        {/* Dual Pricing Display */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between gap-2">
+                                <div className="text-sm">
+                                    <div className="text-xs text-gray-500">Local</div>
+                                    <div className="text-sm font-bold text-blue-600">
+                                        LKR {(
+                                            item.type === 'bites' 
+                                                ? (item.localPricePerPlate || item.pricePerPlate || 0)
+                                                : (item.localPrice || item.pricePerBottle || 0)
+                                        ).toFixed(2)}
+                                    </div>
+                                </div>
+                                <div className="text-sm">
+                                    <div className="text-xs text-gray-500">Foreign</div>
+                                    <div className="text-sm font-bold text-green-600">
+                                        LKR {(
+                                            item.type === 'bites' 
+                                                ? (item.foreignPricePerPlate || item.pricePerPlate || 0)
+                                                : (item.foreignPrice || item.pricePerBottle || 0)
+                                        ).toFixed(2)}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -132,14 +150,12 @@ const LiquorItemCard = React.memo(({
                             <div className="bg-white p-2 rounded border">
                                 <div className="text-sm text-gray-600">Revenue</div>
                                 <div className="text-md font-semibold text-green-600">
-                                    LKR {((item.totalSoldItems || 0) * (item.pricePerPlate || 0)).toFixed(2)}
+                                    LKR {((item.totalSoldItems || 0) * (item.localPricePerPlate || item.pricePerPlate || 0)).toFixed(2)}
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
-
-              
                 {item.type === 'cigarettes' && (
                     <div className="mt-4 p-3 bg-orange-50 rounded-lg">
                         <div className="grid grid-cols-2 gap-3 mb-3">

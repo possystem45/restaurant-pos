@@ -11,12 +11,12 @@ import LiquorBilling from './components/LiquorBilling';
 
 const LIQUOR_TYPES = [
   { value: 'all', label: 'All Types' },
-  { value: 'hard_liquor', label: '🥃 Hard Liquor' },
-  { value: 'beer', label: '🍺 Beer' },
-  { value: 'cigarettes', label: '🚬 Cigarettes' },
-  { value: 'ice_cubes', label: '🧊 Ice Cubes' },
-  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' },
-  { value: 'bites', label: '🍽️ Bites' }
+  { value: 'hard_liquor', label: 'Hard Liquor' },
+  { value: 'beer', label: 'Beer' },
+  { value: 'cigarettes', label: 'Cigarettes' },
+  { value: 'ice_cubes', label: 'Ice Cubes' },
+  { value: 'sandy_bottles', label: 'Sandy Bottles' },
+  { value: 'bites', label: 'Bites' }
 ];
 
 export default function LiquorManagerWithAPI() {
