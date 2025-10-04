@@ -4,11 +4,13 @@ import AdminOverview from './components/AdminOverview';
 import AdminStocks from './components/AdminStocks';
 import AdminLiquor from './components/AdminLiquor';
 import AdminAnalytics from './components/AdminAnalytics';
+import NotificationManager from './components/NotificationManager';
 
 const MemoizedAdminOverview = memo(AdminOverview);
 const MemoizedAdminStocks = memo(AdminStocks);
 const MemoizedAdminLiquor = memo(AdminLiquor);
 const MemoizedAdminAnalytics = memo(AdminAnalytics);
+const MemoizedNotificationManager = memo(NotificationManager);
 
 export default function AdminDashboard() {
     const [activeSection, setActiveSection] = useState('Overview');
@@ -27,6 +29,8 @@ export default function AdminDashboard() {
                 return <MemoizedAdminLiquor />;
             case 'Analytics':
                 return <MemoizedAdminAnalytics />;
+            case 'Notifications':
+                return <MemoizedNotificationManager />;
             default:
                 return <MemoizedAdminOverview />;
         }

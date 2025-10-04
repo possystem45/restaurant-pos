@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom';
-import { MdInventory, MdLocalBar, MdBarChart, MdDashboard } from "react-icons/md";
+import { MdInventory, MdLocalBar, MdBarChart, MdDashboard, MdNotifications } from "react-icons/md";
 import { FaChartLine, FaSignOutAlt } from "react-icons/fa";
 
 const adminItems = [
@@ -8,6 +8,7 @@ const adminItems = [
     { icon: MdInventory, title: 'Stocks'},
     { icon: MdLocalBar, title: 'Liquor'},
     { icon: FaChartLine, title: 'Analytics'},
+    { icon: MdNotifications, title: 'Notifications'},
 ]
 
 export default function AdminHeader({ activeSection, onSectionChange }) {    
