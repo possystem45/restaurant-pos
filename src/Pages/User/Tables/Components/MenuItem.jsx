@@ -33,9 +33,9 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             return item.portions
                 .filter(portion => {
                     const portionName = portion.name.toLowerCase();
-                    return !portionName.includes('full bottle') && 
-                           !portionName.includes('half bottle') && 
-                           !portionName.includes('quarter bottle');
+                    return  !portionName.includes('full bottle') && 
+                            !portionName.includes('half bottle') && 
+                            !portionName.includes('quarter bottle');
                 })
                 .map(portion => ({
                     name: portion.name,
