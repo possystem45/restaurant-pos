@@ -62,17 +62,13 @@ export default function Welcome() {
             const correctPassword = selectedCard.name.toLowerCase(); // 'admin' or 'cashier'
             
             if (password === correctPassword) {
-                console.log(`Authentication successful for ${selectedCard.name}`);
-                
                 // Success - close popup and proceed
                 handleClosePopup();
                 
                 // Redirect to appropriate dashboard based on user type
                 if (selectedCard.name === 'Admin') {
-                    console.log('Redirecting to Admin dashboard...');
                     navigate('/admin/dashboard');
                 } else if (selectedCard.name === 'Cashier') {
-                    console.log('Redirecting to Cashier dashboard...');
                     navigate('/user/dashboard');
                 }
                 

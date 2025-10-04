@@ -11,7 +11,6 @@ class OrderService {
      */
     async createOrder(tableId) {
         try {
-            console.log('🔍 OrderService: Creating order for table:', tableId);
             const orderData = {
                 tableNumber: parseInt(tableId), // Ensure it's a number
                 items: [],
@@ -20,11 +19,10 @@ class OrderService {
                 status: 'created', // Initial status when bill is created
                 paymentStatus: 'unpaid'
             };
-            console.log('🔍 OrderService: Sending order data:', orderData);
             const response = await api.post('/orders', orderData);
             return response;
         } catch (error) {
-            console.error('❌ OrderService: Create order error:', error);
+            console.error('OrderService: Create order error:', error);
             throw this.handleError(error);
         }
     }
@@ -38,7 +36,6 @@ class OrderService {
      */
     async updateOrder(orderId, items, total) {
         try {
-            console.log('🔍 OrderService: Updating order:', orderId);
             const updateData = {
                 items: items.map(item => ({
                     name: item.name,
@@ -56,7 +53,7 @@ class OrderService {
             const response = await api.put(`/orders/${orderId}`, updateData);
             return response;
         } catch (error) {
-            console.error('❌ OrderService: Update order error:', error);
+            console.error('OrderService: Update order error:', error);
             throw this.handleError(error);
         }
     }
@@ -68,11 +65,10 @@ class OrderService {
      */
     async processOrderPayment(orderData) {
         try {
-            console.log('🔍 OrderService: Processing payment for order:', orderData.tableId);
             const response = await api.post('/orders/process-payment', orderData);
             return response;
         } catch (error) {
-            console.error('❌ OrderService: API Error:', error);
+            console.error('OrderService: API Error:', error);
             throw this.handleError(error);
         }
     }
@@ -208,11 +204,10 @@ class OrderService {
      */
     async getCompletedOrders(page = 1, limit = 50) {
         try {
-            console.log('🔍 OrderService: Fetching completed orders - page:', page, 'limit:', limit);
             const response = await api.get(`/orders/completed?page=${page}&limit=${limit}`);
             return response;
         } catch (error) {
-            console.error('❌ OrderService: Get completed orders error:', error);
+            console.error('OrderService: Get completed orders error:', error);
             throw this.handleError(error);
         }
     }

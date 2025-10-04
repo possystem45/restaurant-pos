@@ -4,14 +4,14 @@ import LiquorItemCard from './components/LiquorItemCard';
 
 export default function LiquorManager() {
     const [liquorItems, setLiquorItems] = useState([
-        { id: 1, name: 'Budweiser', category: 'beer', quantity: 48, unit: 'bottle', pricePerUnit: 3.50, volume: 330, volumeUnit: 'ml' },
-        { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', pricePerUnit: 4.25, volume: 355, volumeUnit: 'ml' },
-        { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', pricePerUnit: 45.99, volume: 750, volumeUnit: 'ml' },
-        { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', pricePerUnit: 65.00, volume: 750, volumeUnit: 'ml' },
-        { id: 5, name: 'Chicken Wings', category: 'bites', type: 'bites', servingSize: 'medium', platesInStock: 20, pricePerPlate: 850.00, ingredients: 'Chicken wings, spices, sauce', spiceLevel: 'medium' },
-        { id: 6, name: 'Fish Fingers', category: 'bites', type: 'bites', servingSize: 'small', platesInStock: 15, pricePerPlate: 650.00, ingredients: 'Fish fillets, breadcrumbs, herbs', spiceLevel: 'mild' },
-        { id: 7, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', pricePerUnit: 920.00 },
-        { id: 8, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', pricePerUnit: 900.00 }
+        { id: 1, name: 'Budweiser', category: 'beer', quantity: 48, unit: 'bottle', localPrice: 3.50, foreignPrice: 4.50, pricePerUnit: 3.50, volume: 330, volumeUnit: 'ml' },
+        { id: 2, name: 'Corona Extra', category: 'beer', quantity: 24, unit: 'bottle', localPrice: 4.25, foreignPrice: 5.25, pricePerUnit: 4.25, volume: 355, volumeUnit: 'ml' },
+        { id: 3, name: 'Jack Daniels', category: 'hard_liquor', quantity: 6, unit: 'bottle', localPrice: 45.99, foreignPrice: 65.99, pricePerUnit: 45.99, volume: 750, volumeUnit: 'ml' },
+        { id: 4, name: 'Johnnie Walker Black', category: 'hard_liquor', quantity: 3, unit: 'bottle', localPrice: 65.00, foreignPrice: 85.00, pricePerUnit: 65.00, volume: 750, volumeUnit: 'ml' },
+        { id: 5, name: 'Chicken Wings', category: 'bites', type: 'bites', servingSize: 'medium', platesInStock: 20, localPricePerPlate: 850.00, foreignPricePerPlate: 1050.00, pricePerPlate: 850.00, ingredients: 'Chicken wings, spices, sauce', spiceLevel: 'medium' },
+        { id: 6, name: 'Fish Fingers', category: 'bites', type: 'bites', servingSize: 'small', platesInStock: 15, localPricePerPlate: 650.00, foreignPricePerPlate: 850.00, pricePerPlate: 650.00, ingredients: 'Fish fillets, breadcrumbs, herbs', spiceLevel: 'mild' },
+        { id: 7, name: 'John Player Gold Leaf (12)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_12', quantity: 15, unit: 'pack', localPrice: 920.00, foreignPrice: 1120.00, pricePerUnit: 920.00 },
+        { id: 8, name: 'John Player Gold Leaf (20)', category: 'cigarette', cigaretteType: 'john_player_gold_leaf_20', quantity: 0, unit: 'pack', localPrice: 900.00, foreignPrice: 1100.00, pricePerUnit: 900.00 }
     ]);
 
     const [editingItem, setEditingItem] = useState(null);
@@ -81,15 +81,32 @@ export default function LiquorManager() {
             const newItem = {
                 id: Math.max(...liquorItems.map(item => item.id), 0) + 1,
                 name: formData.name,
+                brand: formData.brand,
+                type: formData.type,
                 category: formData.category,
                 cigaretteType: formData.cigaretteType,
-                quantity: formData.quantity,
+                quantity: formData.bottlesInStock || formData.platesInStock || formData.quantity,
                 unit: formData.unit,
-                pricePerUnit: formData.pricePerUnit,
+                // Dual pricing support
+                localPrice: formData.localPrice || formData.localPricePerPlate,
+                foreignPrice: formData.foreignPrice || formData.foreignPricePerPlate,
+                // Keep for backward compatibility
+                pricePerUnit: formData.localPrice || formData.localPricePerPlate || formData.pricePerUnit,
+                pricePerPlate: formData.localPricePerPlate || formData.pricePerPlate,
+                pricePerBottle: formData.localPrice || formData.pricePerBottle,
                 // Add volume info for liquor items only
-                ...(formData.category !== 'cigarette' && {
-                    volume: formData.volume || 0,
-                    volumeUnit: formData.volumeUnit || 'ml'
+                ...(formData.category !== 'cigarette' && formData.type !== 'bites' && {
+                    volume: formData.bottleVolume || formData.volume || 0,
+                    volumeUnit: formData.volumeUnit || 'ml',
+                    alcoholPercentage: formData.alcoholPercentage
+                }),
+                // Bites specific fields
+                ...(formData.type === 'bites' && {
+                    platesInStock: formData.platesInStock,
+                    localPricePerPlate: formData.localPricePerPlate,
+                    foreignPricePerPlate: formData.foreignPricePerPlate,
+                    ingredients: formData.ingredients,
+                    spiceLevel: formData.spiceLevel
                 })
             };
             setLiquorItems(prev => [...prev, newItem]);
@@ -98,13 +115,31 @@ export default function LiquorManager() {
             setLiquorItems(prev => prev.map(item => 
                 item.id === formData.id 
                     ? { 
-                        ...item, 
-                        quantity: item.quantity + formData.quantity, 
-                        pricePerUnit: formData.pricePerUnit,
+                        ...item,
+                        name: formData.name,
+                        brand: formData.brand,
+                        type: formData.type,
+                        // Dual pricing support
+                        localPrice: formData.localPrice || formData.localPricePerPlate,
+                        foreignPrice: formData.foreignPrice || formData.foreignPricePerPlate,
+                        // Keep for backward compatibility
+                        pricePerUnit: formData.localPrice || formData.localPricePerPlate || formData.pricePerUnit,
+                        pricePerPlate: formData.localPricePerPlate || formData.pricePerPlate,
+                        pricePerBottle: formData.localPrice || formData.pricePerBottle,
+                        quantity: formData.bottlesInStock || formData.platesInStock || formData.quantity,
                         // Update volume if it's a liquor item
-                        ...(item.category !== 'cigarette' && {
-                            volume: formData.volume || item.volume,
-                            volumeUnit: formData.volumeUnit || item.volumeUnit
+                        ...(item.category !== 'cigarette' && item.type !== 'bites' && {
+                            volume: formData.bottleVolume || formData.volume || item.volume,
+                            volumeUnit: formData.volumeUnit || item.volumeUnit,
+                            alcoholPercentage: formData.alcoholPercentage
+                        }),
+                        // Bites specific updates
+                        ...(formData.type === 'bites' && {
+                            platesInStock: formData.platesInStock,
+                            localPricePerPlate: formData.localPricePerPlate,
+                            foreignPricePerPlate: formData.foreignPricePerPlate,
+                            ingredients: formData.ingredients,
+                            spiceLevel: formData.spiceLevel
                         })
                     }
                     : item
@@ -187,9 +222,6 @@ export default function LiquorManager() {
     // Memoized empty state
     const emptyState = useMemo(() => (
         <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-                <div className="text-6xl">🍺</div>
-            </div>
             <h3 className="text-lg font-semibold text-other1 mb-2">No Liquor Items</h3>
             <p className="text-gray-500">Start by adding your first liquor item above.</p>
         </div>

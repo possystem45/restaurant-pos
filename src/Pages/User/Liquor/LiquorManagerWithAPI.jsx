@@ -11,12 +11,12 @@ import LiquorBilling from './components/LiquorBilling';
 
 const LIQUOR_TYPES = [
   { value: 'all', label: 'All Types' },
-  { value: 'hard_liquor', label: '🥃 Hard Liquor' },
-  { value: 'beer', label: '🍺 Beer' },
-  { value: 'cigarettes', label: '🚬 Cigarettes' },
-  { value: 'ice_cubes', label: '🧊 Ice Cubes' },
-  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' },
-  { value: 'bites', label: '🍽️ Bites' }
+  { value: 'hard_liquor', label: 'Hard Liquor' },
+  { value: 'beer', label: 'Beer' },
+  { value: 'cigarettes', label: 'Cigarettes' },
+  { value: 'ice_cubes', label: 'Ice Cubes' },
+  { value: 'sandy_bottles', label: 'Sandy Bottles' },
+  { value: 'bites', label: 'Bites' }
 ];
 
 export default function LiquorManagerWithAPI() {
@@ -50,27 +50,18 @@ export default function LiquorManagerWithAPI() {
 
   // Handle liquor form submission
   const handleLiquorSubmit = async (formData) => {
-    console.log('🔄 LiquorManager: Handling form submission...');
-    console.log('📋 Form data received:', formData);
-    
     try {
       if (editingItem) {
-        console.log('✏️ Updating existing item:', editingItem._id);
         // Update existing item
         const result = await updateLiquorItem(editingItem._id, formData);
-        console.log('✅ Update successful:', result);
       } else {
-        console.log('➕ Creating new item...');
         // Create new item
         const result = await createLiquorItem(formData);
-        console.log('✅ Create successful:', result);
       }
-      
-      console.log('🎉 Form submission completed successfully');
       setShowForm(false);
       setEditingItem(null);
     } catch (error) {
-      console.error('❌ Error handling liquor submission:', error);
+      console.error('Error handling liquor submission:', error);
       // Don't rethrow - let the form handle the error display
       throw error;
     }

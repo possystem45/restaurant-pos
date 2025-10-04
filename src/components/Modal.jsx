@@ -91,7 +91,7 @@ export const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confi
                 </button>
                 <button
                     onClick={onConfirm}
-                    className={`w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base text-white rounded-lg transition-colors ${confirmButtonClass}`}
+                    className={`w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base text-white rounded-lg transition-colors ${confirmButtonClass} bg-primaryColor`}
                 >
                     {confirmText}
                 </button>

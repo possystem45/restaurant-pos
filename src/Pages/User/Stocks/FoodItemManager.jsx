@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../components/Button';
 import { InputField } from '../../../components/InputField';
 import Select from '../../../components/Select';
-import Modal from '../../../components/Modal';
+import Modal, { ConfirmModal } from '../../../components/Modal';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import SmartIngredientInput from './components/SmartIngredientInput';
 import { useFoodItems } from '../../../hooks/useFoodItems';
@@ -34,8 +34,9 @@ const FoodItemManager = () => {
         name: '',
         description: '',
         category: 'Rice Dishes',
-        basePrice: '',
-        sellingPrice: '',
+        localPrice: '',
+        foreignPrice: '',
+        basePrice: '', // Keep for backward compatibility
         ingredients: [],
         nutritionalInfo: {
             calories: '',
@@ -46,6 +47,9 @@ const FoodItemManager = () => {
         allergens: []
     });
     const [errors, setErrors] = useState({});
+    const [successMessage, setSuccessMessage] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     // Load data on component mount
     useEffect(() => {
@@ -61,10 +65,11 @@ const FoodItemManager = () => {
         }
     };
 
-    // Clear errors when modal closes
+    // Clear errors and messages when modal closes
     useEffect(() => {
         if (!showModal) {
             setErrors({});
+            setSuccessMessage('');
             clearError();
         }
     }, [showModal, clearError]);
@@ -89,7 +94,16 @@ const FoodItemManager = () => {
 
         // Clear field-specific error
         if (errors[field]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
+            const newErrors = { ...errors };
+            delete newErrors[field];
+            setErrors(newErrors);
+        }
+        
+        // Clear general errors when user starts typing
+        if (errors.general) {
+            const newErrors = { ...errors };
+            delete newErrors.general;
+            setErrors(newErrors);
         }
     }, [errors]);
 
@@ -130,8 +144,9 @@ const FoodItemManager = () => {
             name: '',
             description: '',
             category: 'Rice Dishes',
-            basePrice: '',
-            sellingPrice: '',
+            localPrice: '',
+            foreignPrice: '',
+            basePrice: '', // Keep for backward compatibility
             ingredients: [],
             nutritionalInfo: {
                 calories: '',
@@ -143,6 +158,7 @@ const FoodItemManager = () => {
         });
         setEditingItem(null);
         setErrors({});
+        setSuccessMessage('');
     }, []);
 
     // Handle add new
@@ -158,8 +174,9 @@ const FoodItemManager = () => {
             name: item.name || '',
             description: item.description || '',
             category: item.category || 'Rice Dishes',
+            localPrice: item.localPrice?.toString() || item.sellingPrice?.toString() || '',
+            foreignPrice: item.foreignPrice?.toString() || item.sellingPrice?.toString() || '',
             basePrice: item.basePrice?.toString() || '',
-            sellingPrice: item.sellingPrice?.toString() || '',
             ingredients: (item.ingredients || []).map(ingredient => ({
                 ...ingredient,
                 id: ingredient.id || Date.now() + Math.random() // Add ID if missing
@@ -179,59 +196,116 @@ const FoodItemManager = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // Validate form
-        const validation = foodItemService.validateFoodItemData(formData);
-        if (!validation.isValid) {
-            setErrors({ general: validation.errors });
+        // Clear any existing errors first
+        setErrors({});
+        setSuccessMessage('');
+        
+        // Custom validation for dual pricing
+        const newErrors = {};
+        
+        if (!formData.name?.trim()) {
+            newErrors.name = 'Food item name is required';
+        }
+        
+        const localPriceValue = formData.localPrice?.toString().trim();
+        const foreignPriceValue = formData.foreignPrice?.toString().trim();
+        
+        if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+            newErrors.localPrice = 'Local price must be greater than 0';
+        }
+        
+        if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+            newErrors.foreignPrice = 'Foreign price must be greater than 0';
+        }
+        
+        if (!formData.category?.trim()) {
+            newErrors.category = 'Category is required';
+        }
+        
+        // Check if there are validation errors
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
 
         try {
             setSubmitLoading(true);
             
-            // Prepare data for submission
             const submitData = {
-                ...formData,
+                name: formData.name.trim(),
+                description: formData.description?.trim() || '',
+                category: formData.category,
+                localPrice: parseFloat(formData.localPrice),
+                foreignPrice: parseFloat(formData.foreignPrice),
                 basePrice: parseFloat(formData.basePrice) || 0,
-                sellingPrice: parseFloat(formData.sellingPrice),
+                // Keep backward compatibility - use localPrice as default sellingPrice
+                sellingPrice: parseFloat(formData.localPrice),
                 ingredients: formData.ingredients.map(ingredient => {
                     // Remove the temporary id field before submitting
                     const { id, ...ingredientData } = ingredient;
-                    return ingredientData;
+                    return {
+                        ...ingredientData,
+                        quantity: parseFloat(ingredientData.quantity) || 0,
+                        cost: parseFloat(ingredientData.cost) || 0
+                    };
                 }),
                 nutritionalInfo: {
                     calories: parseFloat(formData.nutritionalInfo.calories) || 0,
                     protein: parseFloat(formData.nutritionalInfo.protein) || 0,
                     carbs: parseFloat(formData.nutritionalInfo.carbs) || 0,
                     fat: parseFloat(formData.nutritionalInfo.fat) || 0
-                }
+                },
+                allergens: formData.allergens || []
             };
 
             if (editingItem) {
                 await updateFoodItem(editingItem._id, submitData);
+                setSuccessMessage('Food item updated successfully!');
             } else {
                 await createFoodItem(submitData);
+                setSuccessMessage('Food item created successfully!');
             }
 
             setShowModal(false);
             resetForm();
+            
+            // Clear success message after 3 seconds
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
-            setErrors({ general: [error.message] });
+            console.error('Error submitting form:', error);
+            setErrors({ general: ['Failed to save food item. Please try again.'] });
         } finally {
             setSubmitLoading(false);
         }
     };
 
-    // Handle delete
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this food item?')) return;
+    // Handle delete - show confirmation modal
+    const handleDelete = useCallback((item) => {
+        setItemToDelete(item);
+        setShowDeleteModal(true);
+    }, []);
+
+    // Confirm delete action
+    const confirmDelete = useCallback(async () => {
+        if (!itemToDelete) return;
 
         try {
-            await deleteFoodItem(id);
+            await deleteFoodItem(itemToDelete._id);
         } catch (error) {
             console.error('Error deleting food item:', error);
+            // You could show an error message here if needed
+        } finally {
+            // Always close modal and reset state, even if deletion fails
+            setShowDeleteModal(false);
+            setItemToDelete(null);
         }
-    };
+    }, [itemToDelete, deleteFoodItem]);
+
+    // Cancel delete action
+    const cancelDelete = useCallback(() => {
+        setShowDeleteModal(false);
+        setItemToDelete(null);
+    }, []);
 
     // Seed sample data
     const handleSeedData = async () => {
@@ -273,10 +347,10 @@ const FoodItemManager = () => {
                     
                     <div className="flex flex-col sm:flex-row gap-3">
                         <SecondaryButton onClick={handleSeedData}>
-                            🌱 Add Sample Items
+                            Add Sample Items
                         </SecondaryButton>
                         <PrimaryButton onClick={handleAdd}>
-                            ➕ Add New Food Item
+                            Add New Food Item
                         </PrimaryButton>
                     </div>
                 </div>
@@ -308,8 +382,19 @@ const FoodItemManager = () => {
 
             {/* Error Display */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-                    {error}
+                <div className="bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6">
+                    <div className="flex items-center">
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+                <div className="bg-green-50 border-2 border-green-300 text-green-700 px-4 py-3 rounded-lg mb-6">
+                    <div className="flex items-center">
+                        <span className="font-semibold">{successMessage}</span>
+                    </div>
                 </div>
             )}
 
@@ -326,11 +411,27 @@ const FoodItemManager = () => {
                                     </span>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-xl font-bold text-green-600">
-                                        LKR {item.sellingPrice?.toFixed(2)}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                        Cost: LKR {item.basePrice?.toFixed(2)}
+                                    {/* Dual Pricing Display */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-end gap-4">
+                                            <div className="text-right">
+                                                <div className="text-xs text-gray-500">Local</div>
+                                                <div className="text-sm font-bold text-blue-600">
+                                                    LKR {(item.localPrice || item.sellingPrice)?.toFixed(2) || '0.00'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs text-gray-500">Foreign</div>
+                                                <div className="text-sm font-bold text-green-600">
+                                                    LKR {(item.foreignPrice || item.sellingPrice)?.toFixed(2) || '0.00'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {item.basePrice && (
+                                            <div className="text-xs text-gray-500">
+                                                Cost: LKR {item.basePrice?.toFixed(2)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -346,11 +447,19 @@ const FoodItemManager = () => {
                                     <span className="text-gray-500">Ingredients:</span>
                                     <span className="font-medium">{item.ingredients?.length || 0} items</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Profit:</span>
-                                    <span className="font-medium text-green-600">
-                                        LKR {((item.sellingPrice || 0) - (item.basePrice || 0)).toFixed(2)}
-                                    </span>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Local Profit:</span>
+                                        <span className="font-medium text-blue-600">
+                                            LKR {((item.localPrice || item.sellingPrice || 0) - (item.basePrice || 0)).toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Foreign Profit:</span>
+                                        <span className="font-medium text-green-600">
+                                            LKR {((item.foreignPrice || item.sellingPrice || 0) - (item.basePrice || 0)).toFixed(2)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -359,13 +468,13 @@ const FoodItemManager = () => {
                                     onClick={() => handleEdit(item)}
                                     className="flex-1 text-sm"
                                 >
-                                    ✏️ Edit
+                                    Edit
                                 </SecondaryButton>
                                 <SecondaryButton
-                                    onClick={() => handleDelete(item._id)}
+                                    onClick={() => handleDelete(item)}
                                     className="flex-1 text-sm text-red-600 border-red-300 hover:bg-red-50"
                                 >
-                                    🗑️ Delete
+                                    Delete
                                 </SecondaryButton>
                             </div>
                         </div>
@@ -375,7 +484,6 @@ const FoodItemManager = () => {
 
             {filteredFoodItems.length === 0 && (
                 <div className="text-center py-12">
-                    <div className="text-gray-400 text-6xl mb-4">🍽️</div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Food Items Found</h3>
                     <p className="text-gray-500 mb-6">Get started by adding your first food item.</p>
                     <PrimaryButton onClick={handleAdd}>
@@ -392,20 +500,30 @@ const FoodItemManager = () => {
                 size="xl"
             >
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {errors.general && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                            <ul className="list-disc list-inside">
-                                {errors.general.map((error, index) => (
-                                    <li key={`error-${index}-${error.slice(0, 10)}`}>{error}</li>
-                                ))}
-                            </ul>
+                    {/* General Error Display */}
+                    {(errors.general || Object.keys(errors).length > 0) && (
+                        <div className="bg-red-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded-lg">
+                            <div className="flex items-center">
+                                <div>
+                                    <h4 className="font-semibold text-red-800 mb-2">Validation Failed</h4>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {errors.general && errors.general.map((error, index) => (
+                                            <li key={`general-error-${index}`} className="text-red-700">{error}</li>
+                                        ))}
+                                        {errors.name && <li className="text-red-700">{errors.name}</li>}
+                                        {errors.localPrice && <li className="text-red-700">{errors.localPrice}</li>}
+                                        {errors.foreignPrice && <li className="text-red-700">{errors.foreignPrice}</li>}
+                                        {errors.category && <li className="text-red-700">{errors.category}</li>}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     )}
 
                     {/* Basic Information */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            📝 Basic Information
+                            Basic Information
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField
@@ -414,6 +532,8 @@ const FoodItemManager = () => {
                                 onChange={(e) => handleInputChange('name', e)}
                                 required
                                 placeholder="Enter food item name"
+                                error={errors.name}
+                                className={errors.name ? "border-red-500 focus:border-red-500" : ""}
                             />
                             <Select
                                 label="Category *"
@@ -421,6 +541,8 @@ const FoodItemManager = () => {
                                 onChange={(value) => handleInputChange('category', value)}
                                 options={foodItemService.getFoodCategoryOptions()}
                                 required
+                                error={errors.category}
+                                className={errors.category ? "border-red-500 focus:border-red-500" : ""}
                             />
                             <div className="md:col-span-2">
                                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
@@ -432,7 +554,11 @@ const FoodItemManager = () => {
                                     onChange={(e) => handleInputChange('description', e)}
                                     placeholder="Enter item description"
                                     rows={3}
-                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 hover:border-gray-400 placeholder:text-gray-400"
+                                    className={`w-full px-4 py-2 border-2 rounded-lg focus:outline-none hover:border-gray-400 placeholder:text-gray-400 ${
+                                        errors.description 
+                                            ? 'border-red-500 focus:border-red-500' 
+                                            : 'border-gray-300 focus:border-yellow-500'
+                                    }`}
                                 />
                             </div>
                         </div>
@@ -441,27 +567,58 @@ const FoodItemManager = () => {
                     {/* Pricing */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            💰 Pricing Details
+                            Pricing Details
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <InputField
                                 label="Base Cost (LKR)"
                                 type="number"
                                 value={formData.basePrice}
                                 onChange={(e) => handleInputChange('basePrice', e)}
-                                step="0.01"
                                 min="0"
                                 placeholder="0.00"
                             />
                             <InputField
-                                label="Selling Price (LKR) *"
+                                label="Local Price (LKR) *"
                                 type="number"
-                                value={formData.sellingPrice}
-                                onChange={(e) => handleInputChange('sellingPrice', e)}
-                                step="0.01"
-                                min="0"
+                                value={formData.localPrice}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || value === null || value === undefined) {
+                                        handleInputChange('localPrice', '');
+                                    } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                            handleInputChange('localPrice', Math.round(numValue));
+                                        }
+                                    }
+                                }}                                  
                                 required
                                 placeholder="0.00"
+                                error={errors.localPrice}
+                                className={errors.localPrice ? "border-red-500 focus:border-red-500" : ""}
+                            />
+                            <InputField
+                                label="Foreign Price (LKR) *"
+                                type="number"
+                                value={formData.foreignPrice}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || value === null || value === undefined) {
+                                        handleInputChange('foreignPrice', '');
+                                    } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                            handleInputChange('foreignPrice', Math.round(numValue));
+                                        }
+                                    }
+                                }}                                
+                                step="0.01"
+                                min="0.01"
+                                required
+                                placeholder="0.00"
+                                error={errors.foreignPrice}
+                                className={errors.foreignPrice ? "border-red-500 focus:border-red-500" : ""}
                             />
                         </div>
                     </div>
@@ -470,10 +627,10 @@ const FoodItemManager = () => {
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                                🥘 Ingredients
+                                Ingredients
                             </h3>
                             <SecondaryButton type="button" onClick={addIngredient}>
-                                ➕ Add Ingredient
+                                Add Ingredient
                             </SecondaryButton>
                         </div>
 
@@ -493,7 +650,6 @@ const FoodItemManager = () => {
 
                         {formData.ingredients.length === 0 && (
                             <div className="text-center py-8 text-gray-500">
-                                <div className="text-4xl mb-2">🥘</div>
                                 <p>No ingredients added yet. Click "Add Ingredient" to start.</p>
                             </div>
                         )}
@@ -502,7 +658,7 @@ const FoodItemManager = () => {
                     {/* Nutritional Information (Optional) */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            📊 Nutritional Information (Optional)
+                            Nutritional Information (Optional)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <InputField
@@ -544,19 +700,36 @@ const FoodItemManager = () => {
                     </div>
 
                     {/* Form Actions */}
-                    <div className="flex justify-end gap-3 pt-4 border-t">
+                    <div className="flex justify-end gap-3 p-4 border-t">
                         <SecondaryButton type="button" onClick={() => setShowModal(false)}>
                             Cancel
                         </SecondaryButton>
-                        <PrimaryButton type="submit" disabled={submitLoading}>
+                        <PrimaryButton 
+                            type="submit" 
+                            disabled={submitLoading}
+                            className={Object.keys(errors).length > 0 ? "opacity-75" : ""}
+                        >
                             {(() => {
                                 if (submitLoading) return 'Saving...';
+                                if (Object.keys(errors).length > 0) return 'Fix Errors & Save';
                                 return editingItem ? 'Update Food Item' : 'Create Food Item';
                             })()}
                         </PrimaryButton>
                     </div>
                 </form>
             </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                title="Delete Food Item"
+                message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                confirmButtonClass="bg-red-500 hover:bg-red-600"
+            />
         </div>
     );
 };

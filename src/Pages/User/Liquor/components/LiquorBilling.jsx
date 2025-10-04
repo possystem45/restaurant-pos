@@ -212,7 +212,7 @@ const LiquorBilling = ({ isOpen, onClose, onSaleComplete }) => {
             {liquorItems.map(item => (
               <option key={item._id} value={item._id}>
                 {item.name} - {item.brand} ({item.bottlesInStock} bottles) - LKR {item.pricePerBottle.toFixed(2)}
-                {item.bottlesInStock <= item.minimumBottles && ' ⚠️ Low Stock'}
+                {item.bottlesInStock <= item.minimumBottles && ' - Low Stock'}
               </option>
             ))}
           </SelectField>
