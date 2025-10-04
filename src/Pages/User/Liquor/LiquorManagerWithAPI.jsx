@@ -50,27 +50,18 @@ export default function LiquorManagerWithAPI() {
 
   // Handle liquor form submission
   const handleLiquorSubmit = async (formData) => {
-    console.log('🔄 LiquorManager: Handling form submission...');
-    console.log('📋 Form data received:', formData);
-    
     try {
       if (editingItem) {
-        console.log('✏️ Updating existing item:', editingItem._id);
         // Update existing item
         const result = await updateLiquorItem(editingItem._id, formData);
-        console.log('✅ Update successful:', result);
       } else {
-        console.log('➕ Creating new item...');
         // Create new item
         const result = await createLiquorItem(formData);
-        console.log('✅ Create successful:', result);
       }
-      
-      console.log('🎉 Form submission completed successfully');
       setShowForm(false);
       setEditingItem(null);
     } catch (error) {
-      console.error('❌ Error handling liquor submission:', error);
+      console.error('Error handling liquor submission:', error);
       // Don't rethrow - let the form handle the error display
       throw error;
     }

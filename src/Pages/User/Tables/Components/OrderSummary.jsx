@@ -19,11 +19,7 @@ const OrderSummary = memo(function OrderSummary({
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('OrderSummary - Menu items received:', menuItems.length);
-        console.log('OrderSummary - Menu categories:', [...new Set(menuItems.map(item => item.category))]);
-    }, [menuItems]);
+
 
     // Memoize categories to prevent recalculation on every render
     const categories = useMemo(() => {

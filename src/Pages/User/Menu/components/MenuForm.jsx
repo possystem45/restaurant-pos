@@ -15,7 +15,8 @@ const categories = [
 export default memo(function MenuForm({ item, onSubmit, onCancel }) {
     const [formData, setFormData] = useState({
         name: item?.name || '',
-        price: item?.price || '',
+        localPrice: item?.localPrice || item?.price || '',
+        foreignPrice: item?.foreignPrice || item?.price || '',
         category: item?.category || 'Foods',
         description: item?.description || '',
         volume: item?.volume || 750,
@@ -49,10 +50,16 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
             newErrors.name = 'Name is required';
         }
 
-        if (!formData.price) {
-            newErrors.price = 'Price is required';
-        } else if (isNaN(formData.price) || Number(formData.price) <= 0) {
-            newErrors.price = 'Price must be a valid positive number';
+        if (!formData.localPrice) {
+            newErrors.localPrice = 'Local price is required';
+        } else if (isNaN(formData.localPrice) || Number(formData.localPrice) <= 0) {
+            newErrors.localPrice = 'Local price must be a valid positive number';
+        }
+
+        if (!formData.foreignPrice) {
+            newErrors.foreignPrice = 'Foreign price is required';
+        } else if (isNaN(formData.foreignPrice) || Number(formData.foreignPrice) <= 0) {
+            newErrors.foreignPrice = 'Foreign price must be a valid positive number';
         }
         
         if (!formData.category) {
@@ -89,7 +96,10 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
             const submitData = {
                 ...formData,
                 name: formData.name.trim(),
-                price: Number(formData.price),
+                localPrice: Number(formData.localPrice),
+                foreignPrice: Number(formData.foreignPrice),
+                // Keep backward compatibility
+                price: Number(formData.localPrice), // Default to local price for backward compatibility
                 description: formData.description.trim()
             };
             onSubmit(submitData);
@@ -98,7 +108,7 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
     
     // Memoize preview component to prevent unnecessary re-renders
     const previewComponent = useMemo(() => {
-        if (!formData.name || !formData.price) return null;
+        if (!formData.name || !formData.localPrice || !formData.foreignPrice) return null;
         
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -128,8 +138,21 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
                             </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-xl font-bold text-primaryColor">
-                                LKR {Number(formData.price).toLocaleString()}
+                            <div className="space-y-1">
+                                <div className="flex justify-end gap-4">
+                                    <div className="text-right">
+                                        <div className="text-xs text-gray-500">Local</div>
+                                        <div className="text-sm font-bold text-blue-600">
+                                            LKR {Number(formData.localPrice || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs text-gray-500">Foreign</div>
+                                        <div className="text-sm font-bold text-green-600">
+                                            LKR {Number(formData.foreignPrice || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -142,7 +165,7 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
                 </div>
             </div>
         );
-    }, [formData.name, formData.price, formData.category, formData.description, formData.volume, formData.unitsPerPack]);
+    }, [formData.name, formData.localPrice, formData.foreignPrice, formData.category, formData.description, formData.volume, formData.unitsPerPack]);
     
     return (
         <div className="p-8">
@@ -179,17 +202,31 @@ export default memo(function MenuForm({ item, onSubmit, onCancel }) {
                             required
                         />
 
-                        {/* Price */}
+                        {/* Local Price */}
                         <InputField
-                            label="Price (LKR)"
-                            name="price"
+                            label="Local Price (LKR)"
+                            name="localPrice"
                             type="number"
                             step="0.01"
                             min="0"
-                            value={formData.price}
-                            onChange={(e) => handleInputChange('price', e.target.value)}
-                            placeholder="Enter price in LKR"
-                            error={errors.price}
+                            value={formData.localPrice}
+                            onChange={(e) => handleInputChange('localPrice', e.target.value)}
+                            placeholder="Enter local price in LKR"
+                            error={errors.localPrice}
+                            required
+                        />
+
+                        {/* Foreign Price */}
+                        <InputField
+                            label="Foreign Price (LKR)"
+                            name="foreignPrice"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.foreignPrice}
+                            onChange={(e) => handleInputChange('foreignPrice', e.target.value)}
+                            placeholder="Enter foreign price in LKR"
+                            error={errors.foreignPrice}
                             required
                         />
 

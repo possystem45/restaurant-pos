@@ -185,7 +185,6 @@ export default function StockForm({
                 submissionData.expiryDate = formData.expiryDate;
             }
 
-            console.log('Submitting stock data:', submissionData);
             onSubmit(submissionData);
         }
     };

@@ -34,19 +34,13 @@ export default function StockManagerWithAPI() {
     // Handle stock form submission
     const handleStockSubmit = async (formData) => {
         try {
-            console.log('Submitting stock form data:', formData);
-            
             if (editingItem) {
                 // Update existing stock item
-                console.log('Updating stock item:', editingItem._id);
                 const result = await updateStock(editingItem._id, formData);
-                console.log('Stock item updated successfully:', result);
                 alert('Stock item updated successfully!');
             } else {
                 // Create new stock item
-                console.log('Creating new stock item');
                 const result = await createStock(formData);
-                console.log('Stock item created successfully:', result);
                 alert('Stock item created successfully!');
             }
             
@@ -71,7 +65,6 @@ export default function StockManagerWithAPI() {
         if (window.confirm('Are you sure you want to delete this item?')) {
             try {
                 await deleteStock(itemId);
-                console.log('Stock item deleted successfully');
             } catch (error) {
                 console.error('Error deleting stock item:', error);
             }

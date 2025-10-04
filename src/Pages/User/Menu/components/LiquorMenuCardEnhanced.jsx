@@ -154,32 +154,48 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       {/* Content */}
       <div className="flex-1 p-4">
         {/* Price and Info Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          {/* Dual Pricing Display */}
           <div>
-            <span className="text-sm font-medium text-gray-700">Price per {
+            <span className="text-sm font-medium text-gray-700 mb-2 block">Price per {
               liquorItem.type === 'cigarettes' ? 'Pack' : 
               liquorItem.type === 'bites' ? 'Plate' : 
               'Bottle'
             }</span>
-            <p className="text-lg font-semibold text-green-600">
-              LKR {(liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
-            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-2 bg-blue-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Local</div>
+                <p className="text-base font-semibold text-blue-600">
+                  LKR {(liquorItem.localPrice || liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              <div className="text-center p-2 bg-green-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Foreign</div>
+                <p className="text-base font-semibold text-green-600">
+                  LKR {(liquorItem.foreignPrice || liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
           </div>
-          {liquorItem.type === 'hard_liquor' ? (
-            <div>
-              <span className="text-sm font-medium text-gray-700">Alcohol %</span>
-              <p className="text-lg font-semibold text-blue-600">
-                {liquorItem.alcoholPercentage ? `${liquorItem.alcoholPercentage}%` : 'N/A'}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <span className="text-sm font-medium text-gray-700">Type</span>
-              <p className="text-lg font-semibold text-blue-600 capitalize">
-                {liquorItem.type.replace('_', ' ')}
-              </p>
-            </div>
-          )}
+          
+          {/* Additional Info */}
+          <div className="grid grid-cols-2 gap-4">
+            {liquorItem.type === 'hard_liquor' ? (
+              <div>
+                <span className="text-sm font-medium text-gray-700">Alcohol %</span>
+                <p className="text-lg font-semibold text-blue-600">
+                  {liquorItem.alcoholPercentage ? `${liquorItem.alcoholPercentage}%` : 'N/A'}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <span className="text-sm font-medium text-gray-700">Type</span>
+                <p className="text-lg font-semibold text-blue-600 capitalize">
+                  {liquorItem.type.replace('_', ' ')}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Save Message */}
@@ -274,13 +290,20 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
                     return !(isQuarterBottle || isHalfBottle || isFullBottle);
                   })
                   .map((portion) => (
-                  <div key={portion._id} className="flex justify-between items-center bg-white rounded-lg p-3 border">
-                    <span className="text-sm text-gray-700">
-                      {portion.name} ({formatVolume(portion.volume)})
-                    </span>
-                    <span className="text-sm font-semibold text-green-600">
-                      LKR {(portion.price || 0).toFixed(2)}
-                    </span>
+                  <div key={portion._id} className="bg-white rounded-lg p-3 border">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {portion.name} ({formatVolume(portion.volume)})
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-600 font-medium">
+                        Local: LKR {(portion.localPrice || portion.price || 0).toFixed(2)}
+                      </span>
+                      <span className="text-green-600 font-medium">
+                        Foreign: LKR {(portion.foreignPrice || portion.price || 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -294,11 +317,16 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
             </div>
 
             <div className="bg-white rounded-lg p-3 border">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-700">Bottle Price</span>
-                <span className="text-sm font-semibold text-green-600">
-                  LKR {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}
-                </span>
+              <div className="space-y-2">
+                <span className="text-sm text-gray-700 block font-medium">Bottle Price</span>
+                <div className="flex justify-between">
+                  <span className="text-sm text-blue-600 font-medium">
+                    Local: LKR {(liquorItem.localPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                  </span>
+                  <span className="text-sm text-green-600 font-medium">
+                    Foreign: LKR {(liquorItem.foreignPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -321,8 +349,15 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Individual Price</span>
-                    <div className="text-lg font-semibold text-green-600">
-                      LKR {liquorItem.cigaretteIndividualPrice ? Number(liquorItem.cigaretteIndividualPrice).toFixed(2) : 'N/A'}
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-blue-600">
+                        Local: LKR {liquorItem.cigaretteLocalPrice ? Number(liquorItem.cigaretteLocalPrice).toFixed(2) : 
+                                  (liquorItem.cigaretteIndividualPrice ? Number(liquorItem.cigaretteIndividualPrice).toFixed(2) : 'N/A')}
+                      </div>
+                      <div className="text-sm font-medium text-green-600">
+                        Foreign: LKR {liquorItem.cigaretteForeignPrice ? Number(liquorItem.cigaretteForeignPrice).toFixed(2) : 
+                                    (liquorItem.cigaretteIndividualPrice ? Number(liquorItem.cigaretteIndividualPrice).toFixed(2) : 'N/A')}
+                      </div>
                     </div>
                   </div>
                 </div>

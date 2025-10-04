@@ -125,11 +125,25 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
 
       {/* Content */}
       <div className="p-4">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
-            <span className="text-sm font-medium text-gray-700">Price per Bottle:</span>
-            <p className="text-lg font-semibold text-green-600">LKR {liquorItem.pricePerBottle?.toFixed(2)}</p>
+            <span className="text-sm font-medium text-gray-700 mb-2 block">Price per Bottle:</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-2 bg-blue-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Local</div>
+                <p className="text-sm font-semibold text-blue-600">
+                  LKR {(liquorItem.localPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              <div className="text-center p-2 bg-green-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Foreign</div>
+                <p className="text-sm font-semibold text-green-600">
+                  LKR {(liquorItem.foreignPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
           </div>
+          
           <div>
             <span className="text-sm font-medium text-gray-700">Alcohol %:</span>
             <p className="text-lg font-semibold text-blue-600">

@@ -53,8 +53,22 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-lg font-bold text-primaryColor">
-                        LKR {item.price.toLocaleString()}
+                    {/* Dual Pricing Display */}
+                    <div className="space-y-1">
+                        <div className="flex justify-end gap-4">
+                            <div className="text-right">
+                                <div className="text-xs text-gray-500">Local</div>
+                                <div className="text-sm font-bold text-blue-600">
+                                    LKR {(item.localPrice || item.price)?.toLocaleString()}
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-xs text-gray-500">Foreign</div>
+                                <div className="text-sm font-bold text-green-600">
+                                    LKR {(item.foreignPrice || item.price)?.toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
