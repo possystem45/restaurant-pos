@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PrimaryButton, SecondaryButton } from '../../../components/Button';
 import { InputField } from '../../../components/InputField';
 import Select from '../../../components/Select';
-import Modal from '../../../components/Modal';
+import Modal, { ConfirmModal } from '../../../components/Modal';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import SmartIngredientInput from './components/SmartIngredientInput';
 import { useFoodItems } from '../../../hooks/useFoodItems';
@@ -48,6 +48,8 @@ const FoodItemManager = () => {
     });
     const [errors, setErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     // Load data on component mount
     useEffect(() => {
@@ -277,16 +279,33 @@ const FoodItemManager = () => {
         }
     };
 
-    // Handle delete
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this food item?')) return;
+    // Handle delete - show confirmation modal
+    const handleDelete = useCallback((item) => {
+        setItemToDelete(item);
+        setShowDeleteModal(true);
+    }, []);
+
+    // Confirm delete action
+    const confirmDelete = useCallback(async () => {
+        if (!itemToDelete) return;
 
         try {
-            await deleteFoodItem(id);
+            await deleteFoodItem(itemToDelete._id);
         } catch (error) {
             console.error('Error deleting food item:', error);
+            // You could show an error message here if needed
+        } finally {
+            // Always close modal and reset state, even if deletion fails
+            setShowDeleteModal(false);
+            setItemToDelete(null);
         }
-    };
+    }, [itemToDelete, deleteFoodItem]);
+
+    // Cancel delete action
+    const cancelDelete = useCallback(() => {
+        setShowDeleteModal(false);
+        setItemToDelete(null);
+    }, []);
 
     // Seed sample data
     const handleSeedData = async () => {
@@ -328,10 +347,10 @@ const FoodItemManager = () => {
                     
                     <div className="flex flex-col sm:flex-row gap-3">
                         <SecondaryButton onClick={handleSeedData}>
-                            🌱 Add Sample Items
+                            Add Sample Items
                         </SecondaryButton>
                         <PrimaryButton onClick={handleAdd}>
-                            ➕ Add New Food Item
+                            Add New Food Item
                         </PrimaryButton>
                     </div>
                 </div>
@@ -365,7 +384,6 @@ const FoodItemManager = () => {
             {error && (
                 <div className="bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6">
                     <div className="flex items-center">
-                        <span className="text-red-500 text-xl mr-2">❌</span>
                         <span className="font-semibold">{error}</span>
                     </div>
                 </div>
@@ -375,7 +393,6 @@ const FoodItemManager = () => {
             {successMessage && (
                 <div className="bg-green-50 border-2 border-green-300 text-green-700 px-4 py-3 rounded-lg mb-6">
                     <div className="flex items-center">
-                        <span className="text-green-500 text-xl mr-2">✅</span>
                         <span className="font-semibold">{successMessage}</span>
                     </div>
                 </div>
@@ -451,13 +468,13 @@ const FoodItemManager = () => {
                                     onClick={() => handleEdit(item)}
                                     className="flex-1 text-sm"
                                 >
-                                    ✏️ Edit
+                                    Edit
                                 </SecondaryButton>
                                 <SecondaryButton
-                                    onClick={() => handleDelete(item._id)}
+                                    onClick={() => handleDelete(item)}
                                     className="flex-1 text-sm text-red-600 border-red-300 hover:bg-red-50"
                                 >
-                                    🗑️ Delete
+                                    Delete
                                 </SecondaryButton>
                             </div>
                         </div>
@@ -467,7 +484,6 @@ const FoodItemManager = () => {
 
             {filteredFoodItems.length === 0 && (
                 <div className="text-center py-12">
-                    <div className="text-gray-400 text-6xl mb-4">🍽️</div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Food Items Found</h3>
                     <p className="text-gray-500 mb-6">Get started by adding your first food item.</p>
                     <PrimaryButton onClick={handleAdd}>
@@ -488,7 +504,6 @@ const FoodItemManager = () => {
                     {(errors.general || Object.keys(errors).length > 0) && (
                         <div className="bg-red-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded-lg">
                             <div className="flex items-center">
-                                <div className="text-red-500 text-xl mr-2">⚠️</div>
                                 <div>
                                     <h4 className="font-semibold text-red-800 mb-2">Validation Failed</h4>
                                     <ul className="list-disc list-inside space-y-1">
@@ -508,7 +523,7 @@ const FoodItemManager = () => {
                     {/* Basic Information */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            📝 Basic Information
+                            Basic Information
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField
@@ -552,7 +567,7 @@ const FoodItemManager = () => {
                     {/* Pricing */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            💰 Pricing Details
+                            Pricing Details
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <InputField
@@ -567,7 +582,17 @@ const FoodItemManager = () => {
                                 label="Local Price (LKR) *"
                                 type="number"
                                 value={formData.localPrice}
-                                onChange={(e) => handleInputChange('localPrice', e)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || value === null || value === undefined) {
+                                        handleInputChange('localPrice', '');
+                                    } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                            handleInputChange('localPrice', Math.round(numValue));
+                                        }
+                                    }
+                                }}                                  
                                 required
                                 placeholder="0.00"
                                 error={errors.localPrice}
@@ -577,7 +602,17 @@ const FoodItemManager = () => {
                                 label="Foreign Price (LKR) *"
                                 type="number"
                                 value={formData.foreignPrice}
-                                onChange={(e) => handleInputChange('foreignPrice', e)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || value === null || value === undefined) {
+                                        handleInputChange('foreignPrice', '');
+                                    } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                            handleInputChange('foreignPrice', Math.round(numValue));
+                                        }
+                                    }
+                                }}                                
                                 step="0.01"
                                 min="0.01"
                                 required
@@ -592,10 +627,10 @@ const FoodItemManager = () => {
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                                🥘 Ingredients
+                                Ingredients
                             </h3>
                             <SecondaryButton type="button" onClick={addIngredient}>
-                                ➕ Add Ingredient
+                                Add Ingredient
                             </SecondaryButton>
                         </div>
 
@@ -615,7 +650,6 @@ const FoodItemManager = () => {
 
                         {formData.ingredients.length === 0 && (
                             <div className="text-center py-8 text-gray-500">
-                                <div className="text-4xl mb-2">🥘</div>
                                 <p>No ingredients added yet. Click "Add Ingredient" to start.</p>
                             </div>
                         )}
@@ -624,7 +658,7 @@ const FoodItemManager = () => {
                     {/* Nutritional Information (Optional) */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            📊 Nutritional Information (Optional)
+                            Nutritional Information (Optional)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <InputField
@@ -684,6 +718,18 @@ const FoodItemManager = () => {
                     </div>
                 </form>
             </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                title="Delete Food Item"
+                message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                confirmButtonClass="bg-red-500 hover:bg-red-600"
+            />
         </div>
     );
 };
