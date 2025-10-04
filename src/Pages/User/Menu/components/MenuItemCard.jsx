@@ -53,20 +53,12 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                     </div>
                 </div>
                 <div className="text-right">
-                    {/* Dual Pricing Display */}
+                    {/* Local Price Only Display */}
                     <div className="space-y-1">
-                        <div className="flex justify-end gap-4">
-                            <div className="text-right">
-                                <div className="text-xs text-gray-500">Local</div>
-                                <div className="text-sm font-bold text-blue-600">
-                                    LKR {(item.localPrice || item.price)?.toFixed(2) || '0.00'}
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-xs text-gray-500">Foreign</div>
-                                <div className="text-sm font-bold text-green-600">
-                                    LKR {(item.foreignPrice || item.price)?.toFixed(2) || '0.00'}
-                                </div>
+                        <div className="text-right">
+                            <div className="text-xs text-gray-500">Price</div>
+                            <div className="text-lg font-bold text-blue-600">
+                                LKR {(item.localPrice || item.price)?.toFixed(2) || '0.00'}
                             </div>
                         </div>
                     </div>

@@ -40,7 +40,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                 .map(portion => ({
                     name: portion.name,
                     ml: portion.volume,
-                    price: portion.price,
+                    price: portion.localPrice || portion.price || 0,
                     isCustom: false
                 }));
         } else {

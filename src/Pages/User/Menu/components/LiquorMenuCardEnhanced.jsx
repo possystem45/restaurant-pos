@@ -102,40 +102,36 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           volume: 25, 
           name: '25ml', 
           localPrice: Math.round(portionPrices['portion_25ml_local'] || 0), 
-          foreignPrice: Math.round(portionPrices['portion_25ml_foreign'] || 0),
-          price: Math.round(portionPrices['portion_25ml_local'] || 0) // Default to local price
+          foreignPrice: Math.round(portionPrices['portion_25ml_foreign'] || 0)
         },
         { 
           volume: 50, 
           name: '50ml', 
           localPrice: Math.round(portionPrices['portion_50ml_local'] || 0), 
-          foreignPrice: Math.round(portionPrices['portion_50ml_foreign'] || 0),
-          price: Math.round(portionPrices['portion_50ml_local'] || 0)
+          foreignPrice: Math.round(portionPrices['portion_50ml_foreign'] || 0)
         },
         { 
           volume: 75, 
           name: '75ml', 
           localPrice: Math.round(portionPrices['portion_75ml_local'] || 0), 
-          foreignPrice: Math.round(portionPrices['portion_75ml_foreign'] || 0),
-          price: Math.round(portionPrices['portion_75ml_local'] || 0)
+          foreignPrice: Math.round(portionPrices['portion_75ml_foreign'] || 0)
         },
         { 
           volume: 100, 
           name: '100ml', 
           localPrice: Math.round(portionPrices['portion_100ml_local'] || 0), 
-          foreignPrice: Math.round(portionPrices['portion_100ml_foreign'] || 0),
-          price: Math.round(portionPrices['portion_100ml_local'] || 0)
+          foreignPrice: Math.round(portionPrices['portion_100ml_foreign'] || 0)
         }
       ];
 
-      await LiquorService.updateLiquorPortions(liquorItem._id, { portions: standardPortions });
+      const result = await LiquorService.updateLiquorPortions(liquorItem._id, { portions: standardPortions });
       setSaveMessage('Prices saved successfully!');
       setEditingPortions(false);
       onUpdatePortions?.(liquorItem._id, standardPortions);
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       console.error('Error saving portion prices:', error);
-      setSaveMessage('Error saving prices. Please try again.');
+      setSaveMessage(`Error saving prices: ${error.message}`);
       setTimeout(() => setSaveMessage(''), 5000);
     } finally {
       setSaving(false);
