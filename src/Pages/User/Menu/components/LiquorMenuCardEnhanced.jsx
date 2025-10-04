@@ -19,7 +19,8 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
       { id: 'portion_25ml', volume: 25 },
       { id: 'portion_50ml', volume: 50 },
       { id: 'portion_75ml', volume: 75 },
-      { id: 'portion_100ml', volume: 100 }
+      { id: 'portion_100ml', volume: 100 },
+      { id: 'portion_180ml', volume: 180 }
     ];
     
     standardPortions.forEach(portion => {
@@ -81,7 +82,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
   }, [liquorItem.type]);
 
   // Standard portion count
-  const portionCount = 4; // Always 4 standard portions: 25ml, 50ml, 75ml, 100ml
+  const portionCount = 5; // Always 5 standard portions: 25ml, 50ml, 75ml, 100ml, 180ml
 
   const handlePriceChange = useCallback((portionId, value) => {
     const numericValue = parseFloat(value) || 0;
@@ -121,6 +122,12 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
           name: '100ml', 
           localPrice: Math.round(portionPrices['portion_100ml_local'] || 0), 
           foreignPrice: Math.round(portionPrices['portion_100ml_foreign'] || 0)
+        },
+        { 
+          volume: 180, 
+          name: '180ml', 
+          localPrice: Math.round(portionPrices['portion_180ml_local'] || 0), 
+          foreignPrice: Math.round(portionPrices['portion_180ml_foreign'] || 0)
         }
       ];
 
@@ -255,7 +262,7 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               <div>
                 <span className="text-sm font-medium text-gray-700">Portion Pricing</span>
                 <p className="text-sm text-gray-600">
-                  {portionCount} standard portion sizes (25ml, 50ml, 75ml, 100ml)
+                  {portionCount} standard portion sizes (25ml, 50ml, 75ml, 100ml, 180ml)
                 </p>
               </div>
               {!editingPortions && (
@@ -271,12 +278,13 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
 
             {editingPortions ? (
               <div className="space-y-3">
-                {/* Show standard portion sizes: 25ml, 50ml, 75ml, 100ml */}
+                {/* Show standard portion sizes: 25ml, 50ml, 75ml, 100ml, 180ml */}
                 {[
                   { volume: 25, name: '25ml', id: 'portion_25ml' },
                   { volume: 50, name: '50ml', id: 'portion_50ml' },
                   { volume: 75, name: '75ml', id: 'portion_75ml' },
-                  { volume: 100, name: '100ml', id: 'portion_100ml' }
+                  { volume: 100, name: '100ml', id: 'portion_100ml' },
+                  { volume: 180, name: '180ml', id: 'portion_180ml' }
                 ].map((portion) => (
                   <div key={portion.id} className="bg-white rounded-lg p-4 border">
                     <div className="mb-3">
@@ -342,12 +350,13 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Show standard portion sizes: 25ml, 50ml, 75ml, 100ml */}
+                {/* Show standard portion sizes: 25ml, 50ml, 75ml, 100ml, 180ml */}
                 {[
                   { volume: 25, name: '25ml', id: 'portion_25ml' },
                   { volume: 50, name: '50ml', id: 'portion_50ml' },
                   { volume: 75, name: '75ml', id: 'portion_75ml' },
-                  { volume: 100, name: '100ml', id: 'portion_100ml' }
+                  { volume: 100, name: '100ml', id: 'portion_100ml' },
+                  { volume: 180, name: '180ml', id: 'portion_180ml' }
                 ].map((portion) => (
                   <div key={portion.id} className="bg-white rounded-lg p-3 border">
                     <div className="flex justify-between items-center mb-2">

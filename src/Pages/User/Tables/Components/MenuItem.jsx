@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { PrimaryButton } from '../../../../components/Button'
 import { FaPlus, FaTimes, FaMinus } from 'react-icons/fa'
 
-const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
+const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem, selectedTable}) {
     const [showPortionModal, setShowPortionModal] = useState(false);
     const [showCigaretteModal, setShowCigaretteModal] = useState(false);
     const [showFullBottleModal, setShowFullBottleModal] = useState(false);
@@ -24,6 +24,32 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     // Check if this is ice cubes
     const isIceCubes = item.type === 'ice_cubes';
     
+    // Function to get the correct price based on customer type
+    const getPrice = () => {
+        if (customerType === 'foreign') {
+            // Use foreign price if available, fallback to local price
+            return item.foreignPrice || item.localPrice || item.price;
+        } else {
+            // Use local price if available, fallback to regular price
+            return item.localPrice || item.price;
+        }
+    };
+     // Get the current price to display
+    const currentPrice = getPrice();
+
+    // Function to get cigarette individual price based on customer type
+    const getCigaretteIndividualPrice = () => {
+        if (customerType === 'foreign') {
+            return item.cigaretteForeignPrice || item.cigaretteLocalPrice || item.cigaretteIndividualPrice;
+        } else {
+            return item.cigaretteLocalPrice || item.cigaretteIndividualPrice;
+        }
+    };
+
+    // Function to get pack price based on customer type
+    const getPackPrice = () => {
+        return currentPrice; // This already handles customer type
+    };
 
     
     // Use real portions from database or fallback to shot portions only
@@ -40,12 +66,15 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                 .map(portion => ({
                     name: portion.name,
                     ml: portion.volume,
-                    price: portion.localPrice || portion.price || 0,
+                    price: customerType === 'foreign' 
+                        ? (portion.foreignPrice || portion.localPrice || portion.price || 0)
+                        : (portion.localPrice || portion.price || 0),
                     isCustom: false
                 }));
         } else {
             // Fallback to calculated shot portions only (no bottle sales)
             const liquorPortions = [
+                { name: '180ml Shot', ml: 180, priceMultiplier: 0.25 },
                 { name: '100ml Shot', ml: 100, priceMultiplier: 0.15 },
                 { name: '75ml Shot', ml: 75, priceMultiplier: 0.12 },
                 { name: '50ml Shot', ml: 50, priceMultiplier: 0.08 },
@@ -55,7 +84,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             return liquorPortions.map(portion => ({
                 name: portion.name,
                 ml: portion.ml,
-                price: Math.round(item.price * portion.priceMultiplier),
+                price: Math.round(currentPrice * portion.priceMultiplier),
                 isCustom: true
             }));
         }
@@ -71,6 +100,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             // For beer, wine, bites, and other items
             const itemToAdd = {
                 ...item,
+                price: currentPrice, // Use the customer type specific price
                 type: item.type // Ensure type is passed for all items including bites
             };
             onAddItem(selectedTable.id, itemToAdd);
@@ -106,7 +136,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                 ...item,
                 id: `${item.id}_full`,
                 name: `${item.name} (Full Bottle)`,
-                price: item.price,
+                price: currentPrice, // Use customer type specific price
                 type: item.type, // Ensure type is passed
                 isFullBottle: true,
                 originalItemId: item.id
@@ -118,12 +148,14 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     }, [item, onAddItem, selectedTable.id]);
 
     const handleCigaretteSelect = useCallback((option) => {
+        const cigaretteName = option.isIndividual 
+            ? `${item.name} (${cigaretteQuantity} Individual Cigarette${cigaretteQuantity > 1 ? 's' : ''})` 
+            : `${item.name} (Pack)`;
+            
         const cigaretteItem = {
             ...item,
             id: option.isIndividual ? `${item.id}_individual_${cigaretteQuantity}` : item.id,
-            name: option.isIndividual 
-                ? `${item.name} (${cigaretteQuantity} Individual Cigarette${cigaretteQuantity > 1 ? 's' : ''})` 
-                : `${item.name} (Pack)`,
+            name: cigaretteName,
             price: option.isIndividual ? option.price * cigaretteQuantity : option.price,
             type: item.type, // Ensure type is passed
             isIndividual: option.isIndividual,
@@ -155,10 +187,16 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             const ml = item.stock.millilitersRemaining || 0;
             
             if (isCigarettes) {
-                // For cigarettes, show packs and loose cigarettes
-                const cigarettesPerPack = item.cigarettesPerPack || 20;
-                const totalLooseCigarettes = bottles * cigarettesPerPack;
-                return `${bottles} packs, ${totalLooseCigarettes} loose cigarettes`;
+                // For cigarettes, show detailed stock info including individual cigarettes
+                const packs = item.stock.bottlesInStock || 0;
+                const totalCigarettes = item.stock.totalCigarettes || 0;
+                const soldFromOpenedPack = item.stock.remainingIndividualCigarettes || 0;
+                
+                let stockInfo = `${packs} packs (${totalCigarettes} remaining)`;
+                if (soldFromOpenedPack > 0) {
+                    stockInfo += `, ${soldFromOpenedPack} sold from opened pack`;
+                }
+                return stockInfo;
             } else if (isHardLiquor && ml > 0) {
                 return `${bottles} bottles, ${ml}ml remaining`;
             } else {
@@ -199,7 +237,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                 
                 <div className="flex justify-between items-center mt-2 gap-2">
                     <span className="font-medium text-gray-800 text-sm sm:text-base">
-                        LKR {item.price}
+                        LKR {currentPrice}
                         {isHardLiquor && <span className="text-xs text-gray-500"> (bottle)</span>}
                         {isCigarettes && <span className="text-xs text-gray-500"> (pack)</span>}
                         {isBites && <span className="text-xs text-gray-500"> (per plate)</span>}
@@ -273,7 +311,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                         </div>
                                     </div>
                                     <span className="font-medium text-primaryColor">
-                                        LKR {item.price}
+                                        LKR {currentPrice}
                                     </span>
                                 </div>
                             </button>
@@ -355,7 +393,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                             <button
                                 onClick={() => handleCigaretteSelect({
                                     isIndividual: false,
-                                    price: item.price
+                                    price: getPackPrice()
                                 })}
                                 className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-primaryColor transition-colors"
                             >
@@ -366,17 +404,17 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                             {item.cigarettesPerPack || 20} cigarettes per pack
                                         </div>
                                         <div className="text-xs text-blue-600 mt-1">
-                                            LKR {((item.price) / (item.cigarettesPerPack || 20)).toFixed(2)} per cigarette
+                                            LKR {((getPackPrice()) / (item.cigarettesPerPack || 20)).toFixed(2)} per cigarette
                                         </div>
                                     </div>
                                     <span className="font-medium text-primaryColor">
-                                        LKR {item.price}
+                                        LKR {getPackPrice()}
                                     </span>
                                 </div>
                             </button>
 
                             {/* Individual Option with Quantity Controls */}
-                            {item.cigaretteIndividualPrice && (
+                            {getCigaretteIndividualPrice() && (
                                 <div className="border border-gray-200 rounded-lg p-4">
                                     <div className="mb-3">
                                         <span className="font-medium text-other1">Individual Cigarettes</span>
@@ -384,7 +422,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                             Select quantity
                                         </div>
                                         <div className="text-xs text-orange-600 mt-1">
-                                            {(((item.cigaretteIndividualPrice / (item.price / (item.cigarettesPerPack || 20))) - 1) * 100).toFixed(1)}% 
+                                            {(((getCigaretteIndividualPrice() / (getPackPrice() / (item.cigarettesPerPack || 20))) - 1) * 100).toFixed(1)}% 
                                             higher than pack price
                                         </div>
                                     </div>
@@ -413,7 +451,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                         <div className="text-right">
                                             <div className="text-sm text-gray-600">Total Price</div>
                                             <div className="font-medium text-primaryColor">
-                                                LKR {(item.cigaretteIndividualPrice * cigaretteQuantity).toFixed(2)}
+                                                LKR {(getCigaretteIndividualPrice() * cigaretteQuantity).toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
@@ -421,7 +459,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
                                     <button
                                         onClick={() => handleCigaretteSelect({
                                             isIndividual: true,
-                                            price: item.cigaretteIndividualPrice
+                                            price: getCigaretteIndividualPrice()
                                         })}
                                         className="w-full py-2 bg-primaryColor text-white rounded-lg hover:bg-primaryColor/90 transition-colors"
                                     >
@@ -447,6 +485,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
 // Add PropTypes
 MenuItem.propTypes = {
     item: PropTypes.object.isRequired,
+    customerType: PropTypes.oneOf(['local', 'foreign']),
     onAddItem: PropTypes.func.isRequired,
     selectedTable: PropTypes.object.isRequired
 };

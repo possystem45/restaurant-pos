@@ -9,11 +9,15 @@ const OrderSummary = memo(function OrderSummary({
     selectedTable,
     bill,
     menuItems, // Now receiving real API-based menu items
+    customerType = 'local', // New prop for customer type
     onCreateBill,
     onAddItem,
     onRemoveItem,
     onUpdateQuantity,
     onToggleServiceCharge,
+    onToggleCustomerType, // New prop for toggling customer type
+    onToggleEmptyBottle, // New prop for toggling empty bottle return
+    onEmptyBottleCountChange, // New prop for changing empty bottle count
     onCloseBill
 }) {
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -88,6 +92,19 @@ const OrderSummary = memo(function OrderSummary({
         }
     }, [selectedTable, onUpdateQuantity]);
 
+    // Empty bottle handlers
+    const handleToggleEmptyBottle = useCallback(() => {
+        if (selectedTable) {
+            onToggleEmptyBottle(selectedTable.id);
+        }
+    }, [selectedTable, onToggleEmptyBottle]);
+
+    const handleEmptyBottleCountChange = useCallback((change) => {
+        if (selectedTable) {
+            onEmptyBottleCountChange(selectedTable.id, change);
+        }
+    }, [selectedTable, onEmptyBottleCountChange]);
+
     // Callback for removing item
     const handleRemoveItem = useCallback((itemId) => {
         if (selectedTable) {
@@ -95,22 +112,60 @@ const OrderSummary = memo(function OrderSummary({
         }
     }, [selectedTable, onRemoveItem]);
 
-    // Memoize bill calculations
+    // Function to get the correct price for an item based on customer type
+    const getItemPrice = useCallback((item) => {
+        // Find the original menu item to get pricing info
+        const menuItem = menuItems.find(m => 
+            m.id === item.id || 
+            m.id === item.originalItemId || 
+            item.id.startsWith(m.id)
+        );
+        
+        if (!menuItem) return item.price; // Fallback to stored price
+        
+        if (customerType === 'foreign') {
+            // For cigarettes, check if it's individual or pack
+            if (item.isIndividual && menuItem.cigaretteForeignPrice) {
+                return menuItem.cigaretteForeignPrice;
+            }
+            // Use foreign price if available, fallback to local price
+            return menuItem.foreignPrice || menuItem.localPrice || menuItem.price;
+        } else {
+            // For cigarettes, check if it's individual or pack
+            if (item.isIndividual && menuItem.cigaretteLocalPrice) {
+                return menuItem.cigaretteLocalPrice;
+            }
+            // Use local price if available, fallback to regular price
+            return menuItem.localPrice || menuItem.price;
+        }
+    }, [menuItems, customerType]);
+
+    // Memoize bill calculations with dynamic pricing
     const billCalculations = useMemo(() => {
         if (!bill) return null;
         
-        const subtotal = bill.total;
+        // Calculate subtotal based on current customer type pricing
+        const subtotal = bill.items.reduce((sum, item) => {
+            const currentPrice = getItemPrice(item);
+            return sum + (currentPrice * item.quantity);
+        }, 0);
+        
         const serviceCharge = bill.serviceCharge ? subtotal * 0.1 : 0;
-        const total = subtotal + serviceCharge;
+        
+        // Empty bottle deduction
+        const emptyBottleDeduction = (bill.emptyBottleCount || 0) * 100;
+        
+        const total = subtotal + serviceCharge - emptyBottleDeduction;
         const itemCount = bill.items.reduce((sum, item) => sum + item.quantity, 0);
         
         return {
             subtotal,
             serviceCharge,
+            emptyBottleDeduction,
             total,
             itemCount
         };
-    }, [bill]);
+    }, [bill, getItemPrice]);
 
     // Memoize quantity control buttons configuration
     const quantityControlButtons = useMemo(() => [
@@ -388,6 +443,7 @@ const OrderSummary = memo(function OrderSummary({
                                         <MenuItem 
                                             key={item.id}
                                             item={item} 
+                                            customerType={customerType}
                                             onAddItem={onAddItem} 
                                             selectedTable={selectedTable}
                                         />
@@ -401,6 +457,32 @@ const OrderSummary = memo(function OrderSummary({
                     <div className="w-96  bg-white rounded-lg p-3 sm:p-4 border border-gray-200 flex flex-col order-first lg:order-last">
                         <div className="flex justify-between items-center mb-2 sm:mb-3">
                             <h3 className="text-base sm:text-lg font-semibold text-other1">Current Bill</h3>
+                            {/* Customer Type Toggle - Only show when bill has been created */}
+                            {billStatus.hasActiveBill && (
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-xs font-medium ${customerType === 'local' ? 'text-blue-600' : 'text-gray-500'}`}>
+                                        Local
+                                    </span>
+                                    <button
+                                        onClick={onToggleCustomerType}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                            customerType === 'foreign' ? 'bg-blue-600' : 'bg-gray-300'
+                                        }`}
+                                        role="switch"
+                                        aria-checked={customerType === 'foreign'}
+                                        title={`Switch to ${customerType === 'local' ? 'foreign' : 'local'} prices`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                                                customerType === 'foreign' ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                        />
+                                    </button>
+                                    <span className={`text-xs font-medium ${customerType === 'foreign' ? 'text-blue-600' : 'text-gray-500'}`}>
+                                        Foreign
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         
                         {!billStatus.hasItems ? (
@@ -409,17 +491,20 @@ const OrderSummary = memo(function OrderSummary({
                             <>
                                 {/* Bill Items */}
                                 <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 max-h-48 lg:max-h-none">
-                                    {bill.items.map(item => (
-                                        <div key={item.id} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100">
-                                            <div className="flex-1 min-w-0 pr-2">
-                                                <h5 className="font-medium text-other1 text-xs sm:text-sm truncate">{item.name}</h5>
-                                                <p className="text-xs text-gray-600">
-                                                    LKR {item.price} each
-                                                </p>
+                                    {bill.items.map(item => {
+                                        const currentPrice = getItemPrice(item);
+                                        return (
+                                            <div key={item.id} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100">
+                                                <div className="flex-1 min-w-0 pr-2">
+                                                    <h5 className="font-medium text-other1 text-xs sm:text-sm truncate">{item.name}</h5>
+                                                    <p className="text-xs text-gray-600">
+                                                        LKR {currentPrice} each
+                                                    </p>
+                                                </div>
+                                                {renderQuantityControls(item)}
                                             </div>
-                                            {renderQuantityControls(item)}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Bill Total */}
@@ -458,6 +543,63 @@ const OrderSummary = memo(function OrderSummary({
                                             LKR {billCalculations.serviceCharge.toFixed(2)}
                                         </span>
                                     </div>
+
+                                    {/* Empty Bottle Return */}
+                                    <div className="flex justify-between items-center mb-1 sm:mb-2">
+                                        <div className="flex items-center gap-1 sm:gap-2">
+                                            <span className="text-xs sm:text-sm text-gray-600">Empty Bottle Return:</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={bill.emptyBottleReturn || false}
+                                                onChange={handleToggleEmptyBottle}
+                                                className="w-3 h-3 sm:w-4 sm:h-4 appearance-none rounded 
+                                                            border border-gray-300 bg-white
+                                                            checked:bg-green-500 checked:border-green-500
+                                                            focus:ring-0 focus:outline-none
+                                                            relative flex items-center justify-center
+                                                            checked:after:content-['✓'] 
+                                                            checked:after:absolute 
+                                                            checked:after:text-white 
+                                                            checked:after:text-xs 
+                                                            checked:after:font-bold
+                                                            checked:after:left-1/2 
+                                                            checked:after:top-1/2
+                                                            checked:after:transform 
+                                                            checked:after:-translate-x-1/2 
+                                                            checked:after:-translate-y-1/2"
+                                                />
+                                        </div>
+                                        <span className="font-medium text-green-600 text-sm">
+                                            -LKR {billCalculations.emptyBottleDeduction.toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    {/* Empty Bottle Count Controls - Only show when checkbox is checked */}
+                                    {bill.emptyBottleReturn && (
+                                        <div className="flex justify-between items-center mb-1 sm:mb-2 ml-4">
+                                            <span className="text-xs text-gray-500">Bottle Count:</span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleEmptyBottleCountChange(-1)}
+                                                    disabled={(bill.emptyBottleCount || 0) <= 0}
+                                                    className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center text-red-600 disabled:text-gray-400"
+                                                >
+                                                    <FaMinus size={10} />
+                                                </button>
+                                                <span className="font-medium text-sm min-w-[20px] text-center">
+                                                    {bill.emptyBottleCount || 0}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleEmptyBottleCountChange(1)}
+                                                    disabled={(bill.emptyBottleCount || 0) >= 20}
+                                                    className="w-6 h-6 rounded-full bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center text-green-600 disabled:text-gray-400"
+                                                >
+                                                    <FaPlus size={10} />
+                                                </button>
+                                                <span className="text-xs text-gray-500">× LKR 100</span>
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     <div className="flex justify-between items-center text-base sm:text-lg font-bold border-t border-gray-200 pt-2">
                                         <span>Total:</span>
@@ -526,11 +668,15 @@ OrderSummary.propTypes = {
     selectedTable: PropTypes.object,
     bill: PropTypes.object,
     menuItems: PropTypes.array.isRequired,
+    customerType: PropTypes.oneOf(['local', 'foreign']),
     onCreateBill: PropTypes.func.isRequired,
     onAddItem: PropTypes.func.isRequired,
     onRemoveItem: PropTypes.func.isRequired,
     onUpdateQuantity: PropTypes.func.isRequired,
     onToggleServiceCharge: PropTypes.func.isRequired,
+    onToggleCustomerType: PropTypes.func.isRequired,
+    onToggleEmptyBottle: PropTypes.func.isRequired,
+    onEmptyBottleCountChange: PropTypes.func.isRequired,
     onCloseBill: PropTypes.func.isRequired
 };
 

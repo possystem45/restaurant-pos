@@ -99,7 +99,7 @@ const LiquorItemCard = React.memo(({
                                 <div>
                                     <div>{item.quantity || item.bottlesInStock || 0} packs</div>
                                     <div className="text-sm text-gray-500">
-                                        ({((item.quantity || item.bottlesInStock || 0) * (item.cigarettesPerPack || 20))} individual)
+                                        ({((item.quantity || item.bottlesInStock || 0) * (item.cigarettesPerPack || 20)) - (item.individualCigaretteSales || 0)} remaining)
                                     </div>
                                 </div>
                             ) : item.type === 'bites' ? (

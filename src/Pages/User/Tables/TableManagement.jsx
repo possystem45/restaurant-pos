@@ -42,6 +42,13 @@ export default function TableManagement({tableList = []}) {
     const menuItems = useMemo(() => {
         const foodItems = getTransformedFoodItemsForMenu();
         
+        // Enhanced food items with pricing information
+        const enhancedFoodItems = foodItems.map(item => ({
+            ...item,
+            localPrice: item.localPrice || item.price,
+            foreignPrice: item.foreignPrice || item.price,
+        }));
+        
         // Transform liquor items to match menu format
         const transformedLiquorItems = liquorItems.map(item => {
             let category;
@@ -72,6 +79,8 @@ export default function TableManagement({tableList = []}) {
                     name: item.name,
                     brand: item.brand,
                     price: item.pricePerPlate || 0,
+                    localPrice: item.localPricePerPlate || item.pricePerPlate || 0,
+                    foreignPrice: item.foreignPricePerPlate || item.pricePerPlate || 0,
                     category: category,
                     type: item.type,
                     stock: {
@@ -88,6 +97,8 @@ export default function TableManagement({tableList = []}) {
                     name: item.name,
                     brand: item.brand,
                     price: item.pricePerBottle || 0,
+                    localPrice: item.localPrice || item.pricePerBottle || 0,
+                    foreignPrice: item.foreignPrice || item.pricePerBottle || 0,
                     category: category,
                     type: item.type,
                     stock: {
@@ -103,6 +114,8 @@ export default function TableManagement({tableList = []}) {
                 name: item.name,
                 brand: item.brand,
                 price: item.pricePerBottle || 0,
+                localPrice: item.localPrice || item.pricePerBottle || 0,
+                foreignPrice: item.foreignPrice || item.pricePerBottle || 0,
                 category: category,
                 type: item.type,
                 bottleVolume: item.bottleVolume,
@@ -110,20 +123,33 @@ export default function TableManagement({tableList = []}) {
                 alcoholPercentage: item.alcoholPercentage,
                 // Cigarette-specific fields
                 cigaretteIndividualPrice: item.cigaretteIndividualPrice,
+                cigaretteLocalPrice: item.cigaretteLocalPrice,
+                cigaretteForeignPrice: item.cigaretteForeignPrice,
                 cigarettesPerPack: item.cigarettesPerPack || 20,
+                individualCigaretteSales: item.individualCigaretteSales || 0,
                 stock: {
                     bottlesInStock: item.bottlesInStock || 0,
-                    millilitersRemaining: item.totalVolumeRemaining || item.currentBottleVolume || 0
+                    millilitersRemaining: item.totalVolumeRemaining || item.currentBottleVolume || 0,
+                    // Calculate total cigarettes remaining and individual cigarettes for display
+                    totalCigarettes: item.type === 'cigarettes' 
+                        ? ((item.bottlesInStock || 0) * (item.cigarettesPerPack || 20)) - (item.individualCigaretteSales || 0)
+                        : 0,
+                    remainingIndividualCigarettes: item.type === 'cigarettes'
+                        ? (item.individualCigaretteSales || 0)
+                        : 0
                 },
                 isAvailable: (item.bottlesInStock || 0) > 0
             };
         });
 
-        return [...foodItems, ...transformedLiquorItems];
+        return [...enhancedFoodItems, ...transformedLiquorItems];
     }, [getTransformedFoodItemsForMenu, liquorItems]);
 
     // Always start with no table selected (reset on page refresh)
     const [selectedTable, setSelectedTable] = useState(null);
+    
+    // State for customer type (local/foreign pricing)
+    const [customerType, setCustomerType] = useState('local');
     
     // State for confirmation modal
     const [showCloseModal, setShowCloseModal] = useState(false);
@@ -229,10 +255,6 @@ export default function TableManagement({tableList = []}) {
         }
     }, [showCloseModal]);
 
-    const handleTableClick = useCallback((table) => {
-        setSelectedTable(table);
-    }, []);
-
     const handleCreateBill = useCallback(async (tableId) => {
         try {
             // Create order in database immediately with status "created"
@@ -246,6 +268,8 @@ export default function TableManagement({tableList = []}) {
                     items: [],
                     total: 0,
                     serviceCharge: false,
+                    emptyBottleReturn: false,
+                    emptyBottleCount: 0,
                     createdAt: new Date(),
                     status: 'created' // This matches the database status
                 };
@@ -382,6 +406,57 @@ export default function TableManagement({tableList = []}) {
                 [tableId]: {
                     ...prevBills[tableId],
                     serviceCharge: !prevBills[tableId].serviceCharge
+                }
+            };
+        });
+    }, []);
+
+    // Callback for toggling customer type (local/foreign)
+    const handleToggleCustomerType = useCallback(() => {
+        setCustomerType(prevType => prevType === 'local' ? 'foreign' : 'local');
+    }, []);
+
+    // Reset customer type when switching tables
+    const handleTableClick = useCallback((table) => {
+        setSelectedTable(table);
+        // Reset customer type to local when switching tables
+        setCustomerType('local');
+    }, []);
+
+    // Empty bottle handlers
+    const handleToggleEmptyBottle = useCallback((tableId) => {
+        setBills(prevBills => {
+            if (!prevBills[tableId]) return prevBills;
+            
+            const currentBill = prevBills[tableId];
+            const newEmptyBottleReturn = !currentBill.emptyBottleReturn;
+            const newCount = newEmptyBottleReturn ? (currentBill.emptyBottleCount || 1) : 0;
+            
+            return {
+                ...prevBills,
+                [tableId]: {
+                    ...currentBill,
+                    emptyBottleReturn: newEmptyBottleReturn,
+                    emptyBottleCount: newCount
+                }
+            };
+        });
+    }, []);
+
+    const handleEmptyBottleCountChange = useCallback((tableId, change) => {
+        setBills(prevBills => {
+            if (!prevBills[tableId]) return prevBills;
+            
+            const currentBill = prevBills[tableId];
+            const currentCount = currentBill.emptyBottleCount || 0;
+            const newCount = Math.max(0, Math.min(20, currentCount + change)); // Limit between 0 and 20
+            
+            return {
+                ...prevBills,
+                [tableId]: {
+                    ...currentBill,
+                    emptyBottleCount: newCount,
+                    emptyBottleReturn: newCount > 0 // Auto enable if count > 0
                 }
             };
         });
@@ -671,11 +746,15 @@ export default function TableManagement({tableList = []}) {
                     selectedTable={selectedTable}
                     bill={currentBill}
                     menuItems={menuItems}
+                    customerType={customerType}
                     onCreateBill={handleCreateBill}
                     onAddItem={handleAddItemToBill}
                     onRemoveItem={handleRemoveItemFromBill}
                     onUpdateQuantity={handleUpdateItemQuantity}
                     onToggleServiceCharge={handleToggleServiceCharge}
+                    onToggleCustomerType={handleToggleCustomerType}
+                    onToggleEmptyBottle={handleToggleEmptyBottle}
+                    onEmptyBottleCountChange={handleEmptyBottleCountChange}
                     onCloseBill={handleCloseBill}
                 />
             </div>
