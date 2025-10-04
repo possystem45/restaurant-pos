@@ -7,16 +7,16 @@ import Modal from '../../../../components/Modal';
 
 const LIQUOR_TYPES_FLAT = [
   // Single Hard Liquor option
-  { value: 'hard_liquor', label: '🥃 Hard Liquor' },
+  { value: 'hard_liquor', label: 'Hard Liquor' },
   // Beer & Wine
-  { value: 'beer', label: '🍺 Beer' },
-  { value: 'wine', label: '🍷 Wine' },
+  { value: 'beer', label: 'Beer' },
+  { value: 'wine', label: 'Wine' },
   // Other Items
-  { value: 'cigarettes', label: '🚬 Cigarettes' },
-  { value: 'ice_cubes', label: '🧊 Ice Cubes' },
-  { value: 'sandy_bottles', label: '🍾 Sandy Bottles' },
-  { value: 'bites', label: '🍽️ Bites' },
-  { value: 'other', label: 'ℹ️ Other' }
+  { value: 'cigarettes', label: 'Cigarettes' },
+  { value: 'ice_cubes', label: 'Ice Cubes' },
+  { value: 'sandy_bottles', label: 'Sandy Bottles' },
+  { value: 'bites', label: 'Bites' },
+  { value: 'other', label: 'Other' }
 ];
 
 // Hard liquor types that get portions and require bottle volume/alcohol %
@@ -37,6 +37,10 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     type: '', // Start with empty type to force user selection
     bottleVolume: '750',
     bottlesInStock: '0',
+    // Dual Pricing Fields for portions schema - initialize as empty to ensure independent values
+    localPrice: '',
+    foreignPrice: '',
+    // Keep for backward compatibility
     pricePerBottle: '',
     buyingPrice: '', // New field for buying price
     minimumBottles: '0',
@@ -45,7 +49,10 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     // Cigarette-specific fields
     cigaretteIndividualPrice: '',
     cigarettesPerPack: '20',
-    // Bites-specific fields (no stock fields)
+    // Bites-specific fields with dual pricing - initialize as empty to ensure independent values
+    localPricePerPlate: '',
+    foreignPricePerPlate: '',
+    // Keep for backward compatibility
     pricePerPlate: ''
   });
 
@@ -57,18 +64,23 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       setFormData({
         name: item.name || '',
         brand: item.brand || '',
-        type: item.type || '',
+        type: item.type || 'other',
         bottleVolume: (item.bottleVolume || 750).toString(),
         bottlesInStock: (item.bottlesInStock || 0).toString(),
+        // Dual pricing initialization - use direct localPrice/foreignPrice fields first, then fallback to portions or legacy fields
+        localPrice: (item.localPrice || (item.portions && item.portions.length > 0 && item.portions[0].localPrice) || item.pricePerBottle || '').toString(),
+        foreignPrice: (item.foreignPrice || (item.portions && item.portions.length > 0 && item.portions[0].foreignPrice) || item.pricePerBottle || '').toString(),
         pricePerBottle: (item.pricePerBottle || '').toString(),
-        buyingPrice: (item.buyingPrice || '').toString(), // Add buying price
+        buyingPrice: (item.buyingPrice || '').toString(),
         minimumBottles: (item.minimumBottles || 2).toString(),
         alcoholPercentage: (item.alcoholPercentage || '').toString(),
         customBottleVolume: '',
         // Cigarette-specific fields
         cigaretteIndividualPrice: (item.cigaretteIndividualPrice || '').toString(),
         cigarettesPerPack: (item.cigarettesPerPack || 20).toString(),
-        // Bites-specific fields (no stock fields for ice cubes and bites)
+        // Bites-specific fields with dual pricing - only fallback to pricePerPlate if neither dual price exists
+        localPricePerPlate: (item.localPricePerPlate || (item.foreignPricePerPlate ? '' : item.pricePerPlate) || '').toString(),
+        foreignPricePerPlate: (item.foreignPricePerPlate || (item.localPricePerPlate ? '' : item.pricePerPlate) || '').toString(),
         pricePerPlate: (item.pricePerPlate || '').toString()
       });
     }
@@ -92,19 +104,42 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
 
     // Different validation for bites and ice cubes vs other items
     if (formData.type === 'bites') {
-      if (!formData.pricePerPlate || parseFloat(formData.pricePerPlate) <= 0) {
-        newErrors.pricePerPlate = 'Valid price per plate is required';
+      // Dual pricing validation for bites
+      const localPriceValue = formData.localPricePerPlate?.toString().trim();
+      const foreignPriceValue = formData.foreignPricePerPlate?.toString().trim();
+      
+      if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+        newErrors.localPricePerPlate = 'Local price per plate must be greater than 0';
+      }
+      
+      if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+        newErrors.foreignPricePerPlate = 'Foreign price per plate must be greater than 0';
       }
       // No stock validation required for bites - stock count is optional
     } else if (formData.type === 'ice_cubes') {
-      if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
-        newErrors.pricePerBottle = 'Valid price per bowl is required';
+      // Dual pricing validation for ice cubes (treated as bottles)
+      const localPriceValue = formData.localPrice?.toString().trim();
+      const foreignPriceValue = formData.foreignPrice?.toString().trim();
+      
+      if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+        newErrors.localPrice = 'Local price per bowl must be greater than 0';
+      }
+      
+      if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+        newErrors.foreignPrice = 'Foreign price per bowl must be greater than 0';
       }
       // No stock validation required for ice cubes - stock count is optional
     } else {
-      // Validation for other items (hard liquor, beer, wine, cigarettes, etc.)
-      if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
-        newErrors.pricePerBottle = 'Valid price per bottle is required';
+      // Dual pricing validation for other items (hard liquor, beer, wine, cigarettes, etc.)
+      const localPriceValue = formData.localPrice?.toString().trim();
+      const foreignPriceValue = formData.foreignPrice?.toString().trim();
+      
+      if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+        newErrors.localPrice = 'Local price must be greater than 0';
+      }
+      
+      if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+        newErrors.foreignPrice = 'Foreign price must be greater than 0';
       }
 
       if (parseInt(formData.bottlesInStock) < 0) {
@@ -181,7 +216,22 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     let processedValue = value;
     
     // For numeric fields, ensure we don't allow invalid characters but keep as string for display
-    const numericFields = ['bottlesInStock', 'minimumBottles', 'pricePerBottle', 'buyingPrice', 'alcoholPercentage', 'customBottleVolume', 'cigaretteIndividualPrice', 'cigarettesPerPack', 'pricePerPlate'];
+    const numericFields = [
+      'bottlesInStock', 
+      'minimumBottles', 
+      'pricePerBottle', 
+      'buyingPrice', 
+      'alcoholPercentage', 
+      'customBottleVolume', 
+      'cigaretteIndividualPrice', 
+      'cigarettesPerPack', 
+      'pricePerPlate',
+      // Dual pricing fields for portions schema
+      'localPrice',
+      'foreignPrice', 
+      'localPricePerPlate',
+      'foreignPricePerPlate'
+    ];
     
     if (numericFields.includes(field)) {
       // Allow empty string, numbers, and decimal points
@@ -238,19 +288,44 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         submitData.minimumBottles = parseInt(formData.minimumBottles);
       }
 
-      // Add type-specific fields
+      // Add type-specific fields with dual pricing
       if (formData.type === 'bites') {
-        submitData.pricePerPlate = parseFloat(formData.pricePerPlate);
-        // Don't include stock count or buying price for bites
+        // Dual pricing for bites - add to schema fields
+        submitData.localPricePerPlate = parseFloat(formData.localPricePerPlate);
+        submitData.foreignPricePerPlate = parseFloat(formData.foreignPricePerPlate);
+        // Keep for backward compatibility
+        submitData.pricePerPlate = parseFloat(formData.localPricePerPlate);
+        submitData.platesInStock = parseFloat(formData.platesInStock) || 0;
+        // Don't include buying price for bites
         submitData.buyingPrice = undefined;
       } else if (formData.type === 'ice_cubes') {
-        submitData.pricePerBottle = parseFloat(formData.pricePerBottle);
-        // Don't include stock count or buying price for ice cubes
+        // Dual pricing for ice cubes - add to schema fields
+        submitData.localPrice = parseFloat(formData.localPrice);
+        submitData.foreignPrice = parseFloat(formData.foreignPrice);
+        // Keep for backward compatibility
+        submitData.pricePerBottle = parseFloat(formData.localPrice);
+        // Don't include buying price for ice cubes
         submitData.buyingPrice = undefined;
       } else {
-        submitData.pricePerBottle = parseFloat(formData.pricePerBottle);
+        // For other liquor items - add dual pricing fields directly to schema
+        submitData.localPrice = parseFloat(formData.localPrice);
+        submitData.foreignPrice = parseFloat(formData.foreignPrice);
+        // Keep for backward compatibility
+        submitData.pricePerBottle = parseFloat(formData.localPrice);
         submitData.buyingPrice = parseFloat(formData.buyingPrice);
         submitData.bottlesInStock = parseInt(formData.bottlesInStock);
+        
+        // Add portions with dual pricing for hard liquor
+        if (isHardLiquor()) {
+          submitData.portions = [
+            {
+              name: 'Full Bottle',
+              volume: finalBottleVolume,
+              localPrice: parseFloat(formData.localPrice),
+              foreignPrice: parseFloat(formData.foreignPrice)
+            }
+          ];
+        }
       }
 
       // Clean up undefined values
@@ -285,7 +360,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
           <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 border border-yellow-300 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📦</span>
+                <span className="text-xl font-bold text-yellow-800">L</span>
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-800">Item Details</h3>
@@ -297,7 +372,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
           {/* Basic Information Section */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6 pb-3 border-b border-gray-100">
-              <span className="text-lg">ℹ️</span>
               <h4 className="text-lg font-semibold text-gray-800">Basic Information</h4>
             </div>
             
@@ -341,7 +415,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
           {/* Product Specifications Section */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6 pb-3 border-b border-gray-100">
-              <span className="text-lg">⚙️</span>
               <h4 className="text-lg font-semibold text-gray-800">Product Specifications</h4>
             </div>
             
@@ -398,7 +471,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
               {isCigarettes() && (
                 <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-lg">🚬</span>
                     <h5 className="font-semibold text-blue-800">Cigarette Configuration</h5>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,7 +530,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
           {/* Stock & Pricing Section */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6 pb-3 border-b border-gray-100">
-              <span className="text-lg">💰</span>
               <h4 className="text-lg font-semibold text-gray-800">Stock & Pricing</h4>
             </div>
             
@@ -477,16 +548,65 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 />
               )}
 
-              <InputField
-                label={`Selling Price per ${getUnitLabel()}`}
-                id={formData.type === 'bites' ? 'pricePerPlate' : 'pricePerBottle'}
-                type="text"
-                value={formData.type === 'bites' ? formData.pricePerPlate : formData.pricePerBottle}
-                onChange={(e) => handleInputChange(formData.type === 'bites' ? 'pricePerPlate' : 'pricePerBottle', e.target.value)}
-                placeholder="45.99"
-                error={formData.type === 'bites' ? errors.pricePerPlate : errors.pricePerBottle}
-                required
-              />
+              {/* Dual Pricing Fields */}
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField
+                    label={`Local Price per ${getUnitLabel()}`}
+                    id={formData.type === 'bites' ? 'localPricePerPlate' : 'localPrice'}
+                    type="text"
+                    value={formData.type === 'bites' ? formData.localPricePerPlate : formData.localPrice}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Direct update with validation for local price only
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        const fieldName = formData.type === 'bites' ? 'localPricePerPlate' : 'localPrice';
+                        setFormData(prev => ({
+                          ...prev,
+                          [fieldName]: value
+                        }));
+                        // Clear error when user starts typing
+                        if (errors[fieldName]) {
+                          setErrors(prev => ({
+                            ...prev,
+                            [fieldName]: ''
+                          }));
+                        }
+                      }
+                    }}
+                    placeholder="45.99"
+                    error={formData.type === 'bites' ? errors.localPricePerPlate : errors.localPrice}
+                    required
+                  />
+                  <InputField
+                    label={`Foreign Price per ${getUnitLabel()}`}
+                    id={formData.type === 'bites' ? 'foreignPricePerPlate' : 'foreignPrice'}
+                    type="text"
+                    value={formData.type === 'bites' ? formData.foreignPricePerPlate : formData.foreignPrice}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Direct update with validation for foreign price only
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        const fieldName = formData.type === 'bites' ? 'foreignPricePerPlate' : 'foreignPrice';
+                        setFormData(prev => ({
+                          ...prev,
+                          [fieldName]: value
+                        }));
+                        // Clear error when user starts typing
+                        if (errors[fieldName]) {
+                          setErrors(prev => ({
+                            ...prev,
+                            [fieldName]: ''
+                          }));
+                        }
+                      }
+                    }}
+                    placeholder="65.99"
+                    error={formData.type === 'bites' ? errors.foreignPricePerPlate : errors.foreignPrice}
+                    required
+                  />
+                </div>
+              </div>
 
               {/* Hide stock count field for ice cubes and bites */}
               {!['ice_cubes', 'bites'].includes(formData.type) && (
@@ -522,14 +642,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
             <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-300 rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">
-                    {isHardLiquor() && '🥃'}
-                    {(formData.type === 'beer' || formData.type === 'wine') && '🍺'}
-                    {isCigarettes() && '🚬'}
-                    {isIceCubes() && '🧊'}
-                    {isSandyBottles() && '🍾'}
-                    {formData.type === 'bites' && '🍽️'}
-                    {formData.type === 'other' && 'ℹ️'}
+                  <span className="text-lg font-semibold text-yellow-800">
+                    {formData.type.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <h4 className="text-lg font-semibold text-yellow-800">
@@ -571,7 +685,6 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                 {isCigarettes() && (
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-blue-600">💡</span>
                       <span className="text-sm font-semibold text-blue-800">Cigarette Pricing Strategy</span>
                     </div>
                     <ul className="text-xs text-blue-700 space-y-1">
@@ -589,7 +702,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
           {!formData.type && (
             <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🎯</span>
+                <span className="text-xl font-bold text-gray-600">?</span>
               </div>
               <p className="text-gray-600 font-medium mb-2">Select an Item Type</p>
               <p className="text-sm text-gray-500">

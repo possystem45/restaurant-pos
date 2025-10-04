@@ -100,11 +100,33 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
       {/* Content */}
       <div className="p-4">
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <span className="text-sm font-medium text-gray-700">
+          {/* Dual Pricing for Bottles/Packs */}
+          <div className="col-span-2">
+            <span className="text-sm font-medium text-gray-700 mb-2 block">
               {liquorItem.type === 'cigarettes' ? 'Price per Pack:' : 'Price per Bottle:'}
             </span>
-            <p className="text-lg font-semibold text-green-600">LKR {liquorItem.pricePerBottle?.toFixed(2) || '0.00'}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-2 bg-blue-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Local</div>
+                <p className="text-base font-semibold text-blue-600">
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.localPricePerPlate || liquorItem.pricePerPlate || liquorItem.localPrice || liquorItem.pricePerBottle || 0)
+                      : (liquorItem.localPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+              <div className="text-center p-2 bg-green-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Foreign</div>
+                <p className="text-base font-semibold text-green-600">
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.foreignPricePerPlate || liquorItem.pricePerPlate || liquorItem.foreignPrice || liquorItem.pricePerBottle || 0)
+                      : (liquorItem.foreignPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+            </div>
           </div>
           {/* Only show alcohol percentage for hard liquor */}
           {liquorItem.type === 'hard_liquor' && (
@@ -133,14 +155,22 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
 
           {/* Show some portion examples */}
           {hasPortions && (
-            <div className="mt-2 flex flex-wrap gap-1">
+            <div className="mt-2 space-y-1">
               {liquorItem.portions.slice(0, 3).map((portion) => (
-                <span 
+                <div 
                   key={portion._id}
-                  className="px-2 py-1 text-xs bg-white text-gray-600 rounded border"
+                  className="flex items-center justify-between p-2 bg-white rounded border text-xs"
                 >
-                  {formatVolume(portion.volume)} - LKR {portion.price?.toFixed(2) || '0.00'}
-                </span>
+                  <span className="font-medium text-gray-700">{formatVolume(portion.volume)}</span>
+                  <div className="flex gap-2">
+                    <span className="text-blue-600">
+                      L: {(portion.localPrice || 0).toFixed(2)}
+                    </span>
+                    <span className="text-green-600">
+                      F: {(portion.foreignPrice || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               ))}
               {portionCount > 3 && (
                 <span className="px-2 py-1 text-xs text-gray-500">

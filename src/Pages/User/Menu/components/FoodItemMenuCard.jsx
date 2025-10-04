@@ -9,9 +9,12 @@ const FoodItemMenuCard = ({ item }) => {
         return `LKR ${parseFloat(amount || 0).toFixed(2)}`;
     };
 
-    const calculateProfitPercentage = () => {
-        if (!item.basePrice || item.basePrice <= 0) return '0';
-        return (((item.price - item.basePrice) / item.basePrice) * 100).toFixed(1);
+    const calculateProfitPercentage = (price) => {
+        if (!item.basePrice || item.basePrice <= 0 || !price || price <= 0) return '0';
+        const numPrice = parseFloat(price);
+        const numBasePrice = parseFloat(item.basePrice);
+        if (isNaN(numPrice) || isNaN(numBasePrice)) return '0';
+        return (((numPrice - numBasePrice) / numBasePrice) * 100).toFixed(1);
     };
 
     return (
@@ -28,14 +31,29 @@ const FoodItemMenuCard = ({ item }) => {
                         </p>
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-xl font-bold text-green-600">
-                                    {formatCurrency(item.price)}
-                                </span>
+                                {/* Dual Pricing Display */}
+                                <div className="grid grid-cols-2 gap-4 mb-2">
+                                    <div className="text-center">
+                                        <div className="text-xs text-gray-500 mb-1">Local Price</div>
+                                        <span className="text-lg font-bold text-blue-600">
+                                            {formatCurrency(item.localPrice || 0)}
+                                        </span>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-xs text-gray-500 mb-1">Foreign Price</div>
+                                        <span className="text-lg font-bold text-green-600">
+                                            {formatCurrency(item.foreignPrice || 0)}
+                                        </span>
+                                    </div>
+                                </div>
                                 {item.basePrice && item.basePrice > 0 && (
-                                    <span className="text-sm text-gray-500">
-                                        Cost: {formatCurrency(item.basePrice)} • 
-                                        Profit: {calculateProfitPercentage()}%
-                                    </span>
+                                    <div className="text-xs text-gray-500 space-y-1">
+                                        <div>Cost: {formatCurrency(item.basePrice)}</div>
+                                        <div className="flex justify-between">
+                                            <span>Local Profit: {calculateProfitPercentage(item.localPrice)}%</span>
+                                            <span>Foreign Profit: {calculateProfitPercentage(item.foreignPrice)}%</span>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
@@ -145,6 +163,8 @@ FoodItemMenuCard.propTypes = {
         name: PropTypes.string.isRequired,
         description: PropTypes.string,
         price: PropTypes.number.isRequired,
+        localPrice: PropTypes.number, // New dual pricing field
+        foreignPrice: PropTypes.number, // New dual pricing field
         basePrice: PropTypes.number,
         ingredients: PropTypes.arrayOf(PropTypes.shape({
             name: PropTypes.string.isRequired,

@@ -13,7 +13,10 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
     if (liquorItem.portions) {
       const prices = {};
       liquorItem.portions.forEach(portion => {
-        prices[portion._id] = portion.price || 0;
+        prices[portion._id] = {
+          local: portion.localPrice || portion.price || 0,
+          foreign: portion.foreignPrice || portion.price || 0
+        };
       });
       setTempPrices(prices);
     }
@@ -61,18 +64,26 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
     }));
   };
 
-  const handlePriceChange = (portionId, price) => {
+  const handlePriceChange = (portionId, priceType, price) => {
     setTempPrices(prev => ({
       ...prev,
-      [portionId]: parseFloat(price) || 0
+      [portionId]: {
+        ...prev[portionId],
+        [priceType]: parseFloat(price) || 0
+      }
     }));
   };
 
   const savePortion = async (portionId) => {
-    const newPrice = tempPrices[portionId];
+    const newPrices = tempPrices[portionId];
     const updatedPortions = liquorItem.portions.map(portion => 
       portion._id === portionId 
-        ? { ...portion, price: newPrice }
+        ? { 
+            ...portion, 
+            localPrice: newPrices.local,
+            foreignPrice: newPrices.foreign,
+            price: newPrices.local // Keep backward compatibility
+          }
         : portion
     );
     
@@ -125,11 +136,25 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
 
       {/* Content */}
       <div className="p-4">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
-            <span className="text-sm font-medium text-gray-700">Price per Bottle:</span>
-            <p className="text-lg font-semibold text-green-600">LKR {liquorItem.pricePerBottle?.toFixed(2)}</p>
+            <span className="text-sm font-medium text-gray-700 mb-2 block">Price per Bottle:</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-2 bg-blue-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Local</div>
+                <p className="text-sm font-semibold text-blue-600">
+                  LKR {(liquorItem.localPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              <div className="text-center p-2 bg-green-50 rounded-lg">
+                <div className="text-xs text-gray-600 mb-1">Foreign</div>
+                <p className="text-sm font-semibold text-green-600">
+                  LKR {(liquorItem.foreignPrice || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
           </div>
+          
           <div>
             <span className="text-sm font-medium text-gray-700">Alcohol %:</span>
             <p className="text-lg font-semibold text-blue-600">
@@ -171,21 +196,36 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
                     <div className="flex items-center space-x-2">
                       {editingPortions[portion._id] ? (
                         <>
-                          <div className="w-24">
-                            <InputField
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={tempPrices[portion._id] || 0}
-                              onChange={(e) => handlePriceChange(portion._id, e.target.value)}
-                              className="text-sm"
-                              placeholder="0.00"
-                            />
+                          <div className="grid grid-cols-2 gap-2 w-48">
+                            <div>
+                              <label className="text-xs text-blue-600 block mb-1">Local</label>
+                              <InputField
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={tempPrices[portion._id]?.local || 0}
+                                onChange={(e) => handlePriceChange(portion._id, 'local', e.target.value)}
+                                className="text-sm"
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-green-600 block mb-1">Foreign</label>
+                              <InputField
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={tempPrices[portion._id]?.foreign || 0}
+                                onChange={(e) => handlePriceChange(portion._id, 'foreign', e.target.value)}
+                                className="text-sm"
+                                placeholder="0.00"
+                              />
+                            </div>
                           </div>
                           <Button
                             onClick={() => savePortion(portion._id)}
                             className="p-1 text-green-600 hover:bg-green-50 rounded"
-                            title="Save price"
+                            title="Save prices"
                           >
                             <FaSave className="text-sm" />
                           </Button>
@@ -199,13 +239,24 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions }) {
                         </>
                       ) : (
                         <>
-                          <span className="font-bold text-green-600 text-base w-20 text-right">
-                            LKR {portion.price?.toFixed(2) || '0.00'}
-                          </span>
+                          <div className="grid grid-cols-2 gap-3 w-40">
+                            <div className="text-center">
+                              <div className="text-xs text-blue-600 mb-1">Local</div>
+                              <span className="font-bold text-blue-600 text-sm">
+                                LKR {(portion.localPrice || portion.price)?.toFixed(2) || '0.00'}
+                              </span>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-green-600 mb-1">Foreign</div>
+                              <span className="font-bold text-green-600 text-sm">
+                                LKR {(portion.foreignPrice || portion.price)?.toFixed(2) || '0.00'}
+                              </span>
+                            </div>
+                          </div>
                           <Button
                             onClick={() => toggleEditPortion(portion._id)}
                             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit price"
+                            title="Edit prices"
                           >
                             <FaEdit className="text-sm" />
                           </Button>

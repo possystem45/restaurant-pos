@@ -43,6 +43,10 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
     type: 'whiskey',
     bottleVolume: 750,
     bottlesInStock: 0,
+    // Dual Pricing Fields
+    localPrice: '',
+    foreignPrice: '',
+    // Keep for backward compatibility
     pricePerBottle: '',
     minimumBottles: 2,
     supplier: '',
@@ -51,6 +55,9 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
     portions: [],
     // Bites-specific fields
     platesInStock: 0,
+    localPricePerPlate: '',
+    foreignPricePerPlate: '',
+    // Keep for backward compatibility
     pricePerPlate: ''
   });
 
@@ -68,14 +75,19 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         type: item.type || 'whiskey',
         bottleVolume: item.bottleVolume || 750,
         bottlesInStock: item.bottlesInStock || 0,
+        // Dual pricing for liquor
+        localPrice: item.localPrice?.toString() || item.pricePerBottle?.toString() || '',
+        foreignPrice: item.foreignPrice?.toString() || item.pricePerBottle?.toString() || '',
         pricePerBottle: item.pricePerBottle?.toString() || '',
         minimumBottles: item.minimumBottles || 2,
         supplier: item.supplier || '',
         alcoholPercentage: item.alcoholPercentage?.toString() || '',
         description: item.description || '',
         portions: item.portions || [],
-        // Bites-specific fields
+        // Bites-specific fields with dual pricing
         platesInStock: item.platesInStock || 0,
+        localPricePerPlate: item.localPricePerPlate?.toString() || item.pricePerPlate?.toString() || '',
+        foreignPricePerPlate: item.foreignPricePerPlate?.toString() || item.pricePerPlate?.toString() || '',
         pricePerPlate: item.pricePerPlate?.toString() || ''
       });
     } else {
@@ -87,14 +99,19 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
         type: 'whiskey',
         bottleVolume: 750,
         bottlesInStock: 0,
+        // Dual pricing for new items
+        localPrice: '',
+        foreignPrice: '',
         pricePerBottle: '',
         minimumBottles: 2,
         supplier: '',
         alcoholPercentage: '',
         description: '',
         portions: initialPortions,
-        // Bites-specific fields
+        // Bites-specific fields with dual pricing
         platesInStock: 0,
+        localPricePerPlate: '',
+        foreignPricePerPlate: '',
         pricePerPlate: ''
       });
     }
@@ -127,20 +144,36 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
 
     // Different validation for bites vs other items
     if (formData.type === 'bites') {
-      if (!formData.pricePerPlate || parseFloat(formData.pricePerPlate) <= 0) {
-        newErrors.pricePerPlate = 'Price per plate must be greater than 0';
+      // Dual pricing validation for bites
+      const localPriceValue = formData.localPricePerPlate?.toString().trim();
+      const foreignPriceValue = formData.foreignPricePerPlate?.toString().trim();
+      
+      if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+        newErrors.localPricePerPlate = 'Local price per plate must be greater than 0';
+      }
+      
+      if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+        newErrors.foreignPricePerPlate = 'Foreign price per plate must be greater than 0';
       }
 
       if (formData.platesInStock < 0) {
         newErrors.platesInStock = 'Plates in stock cannot be negative';
       }
 
-      if (!formData.ingredients.trim()) {
+      if (!formData.ingredients?.trim()) {
         newErrors.ingredients = 'Ingredients are required for bites';
       }
     } else {
-      if (!formData.pricePerBottle || parseFloat(formData.pricePerBottle) <= 0) {
-        newErrors.pricePerBottle = 'Price per bottle must be greater than 0';
+      // Dual pricing validation for liquor
+      const localPriceValue = formData.localPrice?.toString().trim();
+      const foreignPriceValue = formData.foreignPrice?.toString().trim();
+      
+      if (!localPriceValue || localPriceValue === '' || isNaN(parseFloat(localPriceValue)) || parseFloat(localPriceValue) <= 0) {
+        newErrors.localPrice = 'Local price must be greater than 0';
+      }
+      
+      if (!foreignPriceValue || foreignPriceValue === '' || isNaN(parseFloat(foreignPriceValue)) || parseFloat(foreignPriceValue) <= 0) {
+        newErrors.foreignPrice = 'Foreign price must be greater than 0';
       }
 
       if (formData.bottlesInStock < 0) {
@@ -208,10 +241,19 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
     try {
       const submitData = {
         ...formData,
-        pricePerBottle: parseFloat(formData.pricePerBottle),
+        // Dual pricing for liquor
+        localPrice: parseFloat(formData.localPrice),
+        foreignPrice: parseFloat(formData.foreignPrice),
+        // Keep for backward compatibility
+        pricePerBottle: parseFloat(formData.localPrice),
         bottlesInStock: parseInt(formData.bottlesInStock),
         minimumBottles: parseInt(formData.minimumBottles),
         alcoholPercentage: formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
+        // Dual pricing for bites
+        localPricePerPlate: formData.type === 'bites' ? parseFloat(formData.localPricePerPlate) : undefined,
+        foreignPricePerPlate: formData.type === 'bites' ? parseFloat(formData.foreignPricePerPlate) : undefined,
+        // Keep for backward compatibility
+        pricePerPlate: formData.type === 'bites' ? parseFloat(formData.localPricePerPlate) : undefined,
         portions: formData.type === 'beer' ? [] : formData.portions.map(portion => ({
           ...portion,
           price: parseFloat(portion.price)
@@ -275,18 +317,52 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
           {/* Bites-specific fields */}
           {formData.type === 'bites' && (
             <>
-              <InputField
-                label="Price per Plate (LKR)"
-                id="pricePerPlate"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.pricePerPlate}
-                onChange={(e) => handleInputChange('pricePerPlate', e.target.value)}
-                placeholder="500.00"
-                error={errors.pricePerPlate}
-                required
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField
+                  label="Local Price per Plate (LKR)"
+                  id="localPricePerPlate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.localPricePerPlate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === null || value === undefined) {
+                      handleInputChange('localPricePerPlate', '');
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleInputChange('localPricePerPlate', Math.round(numValue));
+                      }
+                    }
+                  }}
+                  placeholder="500.00"
+                  error={errors.localPricePerPlate}
+                  required
+                />
+                <InputField
+                  label="Foreign Price per Plate (LKR)"
+                  id="foreignPricePerPlate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.foreignPricePerPlate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === null || value === undefined) {
+                      handleInputChange('foreignPricePerPlate', '');
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleInputChange('foreignPricePerPlate', Math.round(numValue));
+                      }
+                    }
+                  }}
+                  placeholder="700.00"
+                  error={errors.foreignPricePerPlate}
+                  required
+                />
+              </div>
 
               <InputField
                 label="Plates in Stock"
@@ -317,18 +393,52 @@ export default function LiquorForm({ item, onSubmit, onCancel }) {
                 ))}
               </SelectField>
 
-              <InputField
-                label="Price per Bottle (LKR)"
-                id="pricePerBottle"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.pricePerBottle}
-                onChange={(e) => handleInputChange('pricePerBottle', e.target.value)}
-                placeholder="45.99"
-                error={errors.pricePerBottle}
-                required
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField
+                  label="Local Price per Bottle (LKR)"
+                  id="localPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.localPrice}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === null || value === undefined) {
+                      handleInputChange('localPrice', '');
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleInputChange('localPrice', Math.round(numValue));
+                      }
+                    }
+                  }}
+                  placeholder="45.99"
+                  error={errors.localPrice}
+                  required
+                />
+                <InputField
+                  label="Foreign Price per Bottle (LKR)"
+                  id="foreignPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.foreignPrice}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === null || value === undefined) {
+                      handleInputChange('foreignPrice', '');
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleInputChange('foreignPrice', Math.round(numValue));
+                      }
+                    }
+                  }}
+                  placeholder="65.99"
+                  error={errors.foreignPrice}
+                  required
+                />
+              </div>
 
               <InputField
                 label="Bottles in Stock"

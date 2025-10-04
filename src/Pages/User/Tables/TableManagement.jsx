@@ -159,7 +159,6 @@ export default function TableManagement({tableList = []}) {
                 // Check if we have any cached bills
                 const cachedBills = Object.keys(bills);
                 if (cachedBills.length > 0) {
-                    console.log('🔄 Syncing cached bills with database...');
                     
                     // Verify each cached bill exists in database
                     for (const tableId of cachedBills) {
@@ -169,7 +168,6 @@ export default function TableManagement({tableList = []}) {
                                 // Try to fetch the order from database
                                 const response = await fetch(`${API_BASE_URL}/orders/${bill.orderId}`);
                                 if (!response.ok) {
-                                    console.log(`⚠️ Order ${bill.orderId} not found in database, removing from cache`);
                                     // Remove invalid bill from cache
                                     setBills(prevBills => {
                                         const newBills = { ...prevBills };
@@ -178,7 +176,6 @@ export default function TableManagement({tableList = []}) {
                                     });
                                 }
                             } catch (error) {
-                                console.log(`⚠️ Error checking order ${bill.orderId}, removing from cache:`, error.message);
                                 // Remove invalid bill from cache
                                 setBills(prevBills => {
                                     const newBills = { ...prevBills };
@@ -392,13 +389,6 @@ export default function TableManagement({tableList = []}) {
 
     const handleCloseBill = useCallback((tableId) => {
         // No validation required - cashiers can close bills even without items
-        console.log('🔍 Closing bill for table:', tableId);
-        const bill = bills[tableId];
-        console.log('🔍 Bill details:', {
-            hasItems: bill?.items?.length > 0,
-            itemCount: bill?.items?.length || 0,
-            status: bill?.status
-        });
         
         setBillToClose(tableId);
         setShowCloseModal(true);
@@ -409,7 +399,7 @@ export default function TableManagement({tableList = []}) {
 
         const bill = bills[billToClose];
 
-        console.log('🔍 Current bill structure:', JSON.stringify(bill, null, 2));
+
 
         try {
             // Process order payment and consume stock (allowing empty bills)
@@ -442,14 +432,7 @@ export default function TableManagement({tableList = []}) {
                                     (item.type === 'cigarettes' && item.price !== item.pricePerBottle && !item.id?.includes('_pack'))
                     };
                     
-                    console.log(`🍺 Enhanced liquor item: ${item.name}`, {
-                        originalId: item.id,
-                        extractedId: enhancedItem.originalItemId,
-                        type: item.type,
-                        isFullBottle: enhancedItem.isFullBottle,
-                        isIndividual: enhancedItem.isIndividual,
-                        portion: enhancedItem.portion
-                    });
+
                     
                     return enhancedItem;
                 }
@@ -463,12 +446,7 @@ export default function TableManagement({tableList = []}) {
                         // No stock tracking for bites
                     };
                     
-                    console.log(`🍽️ Enhanced bites item: ${item.name}`, {
-                        originalId: item.id,
-                        type: item.type,
-                        quantity: item.quantity,
-                        stockTracking: 'Not tracked'
-                    });
+
                     
                     return enhancedBitesItem;
                 }
@@ -487,15 +465,8 @@ export default function TableManagement({tableList = []}) {
                 customerId: null
             };
 
-            console.log('🔍 Processing payment for table:', billToClose);
-
             // Call the order service to process payment and consume stock
-            const result = await orderService.processOrderPayment(orderData);
-            
-            console.log('🔍 Sent order data:', JSON.stringify(orderData, null, 2));
-            console.log('Payment result:', result?.success ? 'SUCCESS' : 'FAILED');
-            
-            // Handle successful payment
+            const result = await orderService.processOrderPayment(orderData);            // Handle successful payment
             if (result && result.success === true) {
                 // Clear selected table and close modal FIRST
                 setSelectedTable(null);
@@ -578,12 +549,12 @@ export default function TableManagement({tableList = []}) {
                 );
             } else {
                 // Handle failed response - this should not happen with the updated backend
-                console.error('❌ Unexpected response format:', result);
+                console.error('Unexpected response format:', result);
                 throw new Error(result?.message || 'Unexpected response from server');
             }
 
         } catch (error) {
-            console.error('❌ Error processing order payment:', error);
+            console.error('Error processing order payment:', error);
             
             // Show user-friendly error message
             let errorMessage = error.message || 'Unknown error occurred';

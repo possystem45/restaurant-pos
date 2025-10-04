@@ -24,20 +24,7 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
     // Check if this is ice cubes
     const isIceCubes = item.type === 'ice_cubes';
     
-    // Debug logging for new liquor items
-    if (item.type && (item.type === 'hard_liquor' || item.type === 'beer' || item.type === 'cigarettes')) {
-        console.log('MenuItem - Database item:', {
-            name: item.name,
-            type: item.type,
-            category: item.category,
-            portions: item.portions?.length || 0,
-            cigaretteFields: {
-                cigaretteIndividualPrice: item.cigaretteIndividualPrice,
-                cigarettesPerPack: item.cigarettesPerPack
-            },
-            stock: item.stock
-        });
-    }
+
     
     // Use real portions from database or fallback to shot portions only
     const getPortions = () => {
@@ -46,14 +33,14 @@ const MenuItem = memo(function MenuItem({item, onAddItem, selectedTable}) {
             return item.portions
                 .filter(portion => {
                     const portionName = portion.name.toLowerCase();
-                    return !portionName.includes('full bottle') && 
-                           !portionName.includes('half bottle') && 
-                           !portionName.includes('quarter bottle');
+                    return  !portionName.includes('full bottle') && 
+                            !portionName.includes('half bottle') && 
+                            !portionName.includes('quarter bottle');
                 })
                 .map(portion => ({
                     name: portion.name,
                     ml: portion.volume,
-                    price: portion.price,
+                    price: portion.localPrice || portion.price || 0,
                     isCustom: false
                 }));
         } else {

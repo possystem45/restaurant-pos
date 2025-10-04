@@ -48,21 +48,6 @@ export default memo(function MenuManager() {
         setLiquorItemsLoading(true);
         try {
             const response = await LiquorService.getAllLiquors();
-            console.log('Raw liquor API response:', response); // Debug log
-            console.log('Liquor data array:', response.data); // Debug log
-            
-            if (response.data && response.data.length > 0) {
-                const types = [...new Set(response.data.map(item => item.type))];
-                console.log('Liquor types found:', types); // Debug log
-                
-                // Check specifically for cigarettes
-                const cigarettes = response.data.filter(item => item.type === 'cigarettes');
-                console.log('Cigarettes found:', cigarettes.length, cigarettes); // Debug log
-                
-                // Check specifically for bites
-                const bites = response.data.filter(item => item.type === 'bites');
-                console.log('Bites found:', bites.length, bites); // Debug log
-            }
             
             setLiquorItems(response.data || []);
         } catch (error) {
@@ -81,7 +66,6 @@ export default memo(function MenuManager() {
                 fetchLiquorItems(),
                 fetchFoodItems()
             ]);
-            console.log('All menu data refreshed successfully');
         } catch (error) {
             console.error('Error refreshing menu data:', error);
         } finally {
@@ -103,6 +87,8 @@ export default memo(function MenuManager() {
             category: FOOD_CATEGORY_MAPPING[item.category] || 'Foods',
             description: item.description,
             price: item.sellingPrice,
+            localPrice: item.localPrice,
+            foreignPrice: item.foreignPrice,
             basePrice: item.basePrice,
             ingredients: item.ingredients || [],
             nutritionalInfo: item.nutritionalInfo,
@@ -114,10 +100,7 @@ export default memo(function MenuManager() {
 
         // Convert liquor items to menu format
         const liquorMenuItems = liquorItems.map(item => {
-            // Debug log for bites items specifically
-            if (item.type === 'bites') {
-                console.log('Processing bites item:', item);
-            }
+
             
             // Map item types to appropriate categories
             let category;
@@ -156,6 +139,10 @@ export default memo(function MenuManager() {
                     ? `${item.brand} ${item.name} - ${item.bottleVolume}ml (${item.alcoholPercentage}% alcohol)`
                     : `${item.brand} ${item.name}` + (item.bottleVolume ? ` - ${item.bottleVolume}ml` : ''),
                 price: item.type === 'bites' ? item.pricePerPlate : item.pricePerBottle,
+                localPrice: item.localPrice,
+                foreignPrice: item.foreignPrice,
+                localPricePerPlate: item.localPricePerPlate,
+                foreignPricePerPlate: item.foreignPricePerPlate,
                 pricePerBottle: item.pricePerBottle,
                 pricePerPlate: item.pricePerPlate,
                 bottleVolume: item.bottleVolume,
@@ -172,13 +159,7 @@ export default memo(function MenuManager() {
                 _id: item._id
             };
             
-            // Debug log for converted bites item
-            if (item.type === 'bites') {
-                console.log('Converted bites menu item:', {
-                    original: item,
-                    converted: menuItem
-                });
-            }
+
             
             return menuItem;
         });
@@ -186,20 +167,7 @@ export default memo(function MenuManager() {
         // Combine only API-based items (food items and liquor items)
         const allItems = [...foodMenuItems, ...liquorMenuItems];
         
-        // Debug logging for ice cubes and sandy bottles
-        const iceCubesItems = allItems.filter(item => item.category === 'Ice Cubes');
-        const sandyBottlesItems = allItems.filter(item => item.category === 'Sandy Bottles');
-        const cigaretteItems = allItems.filter(item => item.category === 'Cigarettes');
-        const bitesItems = allItems.filter(item => item.category === 'Bites');
-        
-        console.log('Ice Cubes menu items:', iceCubesItems); // Debug log
-        console.log('Sandy Bottles menu items:', sandyBottlesItems); // Debug log
-        console.log('Cigarette menu items:', cigaretteItems); // Debug log
-        console.log('Bites menu items:', bitesItems); // Debug log
-        
-        console.log('All menu items:', allItems.length); // Debug log
-        console.log('Food items:', foodMenuItems.length); // Debug log  
-        console.log('Liquor items:', liquorMenuItems.length); // Debug log
+
 
         return allItems.filter(item => {
             const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,39 +175,7 @@ export default memo(function MenuManager() {
                                 item.brand?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
             
-            // Debug log for ice cubes and sandy bottles filtering
-            if (item.category === 'Ice Cubes' || item.category === 'Sandy Bottles') {
-                console.log(`${item.category} filter check:`, {
-                    item: item.name,
-                    category: item.category,
-                    matchesSearch,
-                    matchesCategory,
-                    selectedCategory,
-                    willShow: matchesSearch && matchesCategory
-                });
-            }
-            
-            // Debug log for cigarette filtering
-            if (item.category === 'Cigarettes') {
-                console.log('Cigarette filter check:', {
-                    item: item.name,
-                    matchesSearch,
-                    matchesCategory,
-                    selectedCategory,
-                    willShow: matchesSearch && matchesCategory
-                });
-            }
-            
-            // Debug log for bites filtering
-            if (item.category === 'Bites') {
-                console.log('Bites filter check:', {
-                    item: item.name,
-                    matchesSearch,
-                    matchesCategory,
-                    selectedCategory,
-                    willShow: matchesSearch && matchesCategory
-                });
-            }
+
             
             return matchesSearch && matchesCategory;
         });
