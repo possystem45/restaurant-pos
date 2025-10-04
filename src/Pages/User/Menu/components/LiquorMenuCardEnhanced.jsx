@@ -166,13 +166,21 @@ export default function LiquorMenuCard({ liquorItem, onUpdatePortions, onEdit, o
               <div className="text-center p-2 bg-blue-50 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">Local</div>
                 <p className="text-base font-semibold text-blue-600">
-                  LKR {(liquorItem.localPrice || liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.localPricePerPlate || liquorItem.pricePerPlate || 0)
+                      : (liquorItem.localPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
                 </p>
               </div>
               <div className="text-center p-2 bg-green-50 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">Foreign</div>
                 <p className="text-base font-semibold text-green-600">
-                  LKR {(liquorItem.foreignPrice || liquorItem.pricePerPlate || liquorItem.pricePerBottle)?.toFixed(2) || '0.00'}
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.foreignPricePerPlate || liquorItem.pricePerPlate || 0)
+                      : (liquorItem.foreignPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
                 </p>
               </div>
             </div>

@@ -59,13 +59,13 @@ const MenuItemCard = memo(function MenuItemCard({ item, onEdit, onDelete }) {
                             <div className="text-right">
                                 <div className="text-xs text-gray-500">Local</div>
                                 <div className="text-sm font-bold text-blue-600">
-                                    LKR {(item.localPrice || item.price)?.toLocaleString()}
+                                    LKR {(item.localPrice || item.price)?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                             <div className="text-right">
                                 <div className="text-xs text-gray-500">Foreign</div>
                                 <div className="text-sm font-bold text-green-600">
-                                    LKR {(item.foreignPrice || item.price)?.toLocaleString()}
+                                    LKR {(item.foreignPrice || item.price)?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                         </div>

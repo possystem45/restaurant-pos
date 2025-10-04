@@ -109,13 +109,21 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
               <div className="text-center p-2 bg-blue-50 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">Local</div>
                 <p className="text-base font-semibold text-blue-600">
-                  LKR {liquorItem.localPrice?.toFixed(2) || liquorItem.pricePerBottle?.toFixed(2) || '0.00'}
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.localPricePerPlate || liquorItem.pricePerPlate || liquorItem.localPrice || liquorItem.pricePerBottle || 0)
+                      : (liquorItem.localPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
                 </p>
               </div>
               <div className="text-center p-2 bg-green-50 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">Foreign</div>
                 <p className="text-base font-semibold text-green-600">
-                  LKR {liquorItem.foreignPrice?.toFixed(2) || liquorItem.pricePerBottle?.toFixed(2) || '0.00'}
+                  LKR {(
+                    liquorItem.type === 'bites' 
+                      ? (liquorItem.foreignPricePerPlate || liquorItem.pricePerPlate || liquorItem.foreignPrice || liquorItem.pricePerBottle || 0)
+                      : (liquorItem.foreignPrice || liquorItem.pricePerBottle || 0)
+                  ).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -156,10 +164,10 @@ export default function LiquorMenuCard({ liquorItem, onManagePortions }) {
                   <span className="font-medium text-gray-700">{formatVolume(portion.volume)}</span>
                   <div className="flex gap-2">
                     <span className="text-blue-600">
-                      L: {portion.localPrice?.toFixed(2) || portion.price?.toFixed(2) || '0.00'}
+                      L: {(portion.localPrice || 0).toFixed(2)}
                     </span>
                     <span className="text-green-600">
-                      F: {portion.foreignPrice?.toFixed(2) || portion.price?.toFixed(2) || '0.00'}
+                      F: {(portion.foreignPrice || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>

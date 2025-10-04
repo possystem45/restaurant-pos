@@ -10,8 +10,11 @@ const FoodItemMenuCard = ({ item }) => {
     };
 
     const calculateProfitPercentage = (price) => {
-        if (!item.basePrice || item.basePrice <= 0) return '0';
-        return (((price - item.basePrice) / item.basePrice) * 100).toFixed(1);
+        if (!item.basePrice || item.basePrice <= 0 || !price || price <= 0) return '0';
+        const numPrice = parseFloat(price);
+        const numBasePrice = parseFloat(item.basePrice);
+        if (isNaN(numPrice) || isNaN(numBasePrice)) return '0';
+        return (((numPrice - numBasePrice) / numBasePrice) * 100).toFixed(1);
     };
 
     return (
@@ -33,13 +36,13 @@ const FoodItemMenuCard = ({ item }) => {
                                     <div className="text-center">
                                         <div className="text-xs text-gray-500 mb-1">Local Price</div>
                                         <span className="text-lg font-bold text-blue-600">
-                                            {formatCurrency(item.localPrice || item.price)}
+                                            {formatCurrency(item.localPrice || 0)}
                                         </span>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-xs text-gray-500 mb-1">Foreign Price</div>
                                         <span className="text-lg font-bold text-green-600">
-                                            {formatCurrency(item.foreignPrice || item.price)}
+                                            {formatCurrency(item.foreignPrice || 0)}
                                         </span>
                                     </div>
                                 </div>
@@ -47,8 +50,8 @@ const FoodItemMenuCard = ({ item }) => {
                                     <div className="text-xs text-gray-500 space-y-1">
                                         <div>Cost: {formatCurrency(item.basePrice)}</div>
                                         <div className="flex justify-between">
-                                            <span>Local Profit: {calculateProfitPercentage(item.localPrice || item.price)}%</span>
-                                            <span>Foreign Profit: {calculateProfitPercentage(item.foreignPrice || item.price)}%</span>
+                                            <span>Local Profit: {calculateProfitPercentage(item.localPrice)}%</span>
+                                            <span>Foreign Profit: {calculateProfitPercentage(item.foreignPrice)}%</span>
                                         </div>
                                     </div>
                                 )}
@@ -160,6 +163,8 @@ FoodItemMenuCard.propTypes = {
         name: PropTypes.string.isRequired,
         description: PropTypes.string,
         price: PropTypes.number.isRequired,
+        localPrice: PropTypes.number, // New dual pricing field
+        foreignPrice: PropTypes.number, // New dual pricing field
         basePrice: PropTypes.number,
         ingredients: PropTypes.arrayOf(PropTypes.shape({
             name: PropTypes.string.isRequired,
