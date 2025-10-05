@@ -121,23 +121,39 @@ const OrderSummary = memo(function OrderSummary({
             item.id.startsWith(m.id)
         );
         
-        if (!menuItem) return item.price; // Fallback to stored price
-        
-        if (customerType === 'foreign') {
-            // For cigarettes, check if it's individual or pack
-            if (item.isIndividual && menuItem.cigaretteForeignPrice) {
-                return menuItem.cigaretteForeignPrice;
+        // Handle portion items - recalculate based on customer type
+        if (item.portion && menuItem && menuItem.portions) {
+            const originalPortion = menuItem.portions.find(portion => 
+                portion.volume === item.portion.ml && portion.name === item.portion.type
+            );
+            if (originalPortion) {
+                return customerType === 'foreign' 
+                    ? (originalPortion.foreignPrice || originalPortion.localPrice || originalPortion.price || 0)
+                    : (originalPortion.localPrice || originalPortion.price || 0);
             }
-            // Use foreign price if available, fallback to local price
-            return menuItem.foreignPrice || menuItem.localPrice || menuItem.price;
-        } else {
-            // For cigarettes, check if it's individual or pack
-            if (item.isIndividual && menuItem.cigaretteLocalPrice) {
-                return menuItem.cigaretteLocalPrice;
-            }
-            // Use local price if available, fallback to regular price
-            return menuItem.localPrice || menuItem.price;
+            // Fallback to stored portion price if original not found
+            return item.portion.price;
         }
+        
+        // Handle cigarette items
+        if (item.isIndividual && menuItem) {
+            const basePrice = customerType === 'foreign'
+                ? (menuItem.cigaretteForeignPrice || menuItem.cigaretteLocalPrice || menuItem.cigaretteIndividualPrice || 0)
+                : (menuItem.cigaretteLocalPrice || menuItem.cigaretteIndividualPrice || 0);
+            return basePrice * (item.quantity || 1);
+        }
+        
+        // Handle regular items (full bottles, packs, etc.)
+        if (menuItem) {
+            if (customerType === 'foreign') {
+                return menuItem.foreignPrice || menuItem.localPrice || menuItem.price || 0;
+            } else {
+                return menuItem.localPrice || menuItem.price || 0;
+            }
+        }
+        
+        // Fallback to stored price if menu item not found
+        return item.price || 0;
     }, [menuItems, customerType]);
 
     // Memoize bill calculations with dynamic pricing

@@ -113,6 +113,8 @@ const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem
             id: `${item.id}_${portion.ml}ml`,
             name: `${item.name} (${portion.name})`,
             price: portion.price,
+            localPrice: portion.price, // Override the item's localPrice with portion price
+            foreignPrice: portion.price, // Override the item's foreignPrice with portion price
             type: item.type, // Ensure type is passed
             portion: {
                 type: portion.name,
@@ -148,8 +150,9 @@ const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem
     }, [item, onAddItem, selectedTable.id]);
 
     const handleCigaretteSelect = useCallback((option) => {
+        const cigaretteWord = cigaretteQuantity > 1 ? 's' : '';
         const cigaretteName = option.isIndividual 
-            ? `${item.name} (${cigaretteQuantity} Individual Cigarette${cigaretteQuantity > 1 ? 's' : ''})` 
+            ? `${item.name} (${cigaretteQuantity} Individual Cigarette${cigaretteWord})` 
             : `${item.name} (Pack)`;
             
         const cigaretteItem = {
