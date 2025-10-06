@@ -154,7 +154,9 @@ export const useFoodItems = () => {
             id: item._id,
             name: item.name,
             description: item.description,
-            price: item.sellingPrice || item.basePrice,
+            price: item.localPrice || item.sellingPrice || item.basePrice, // Default to local price
+            localPrice: item.localPrice || item.sellingPrice || item.basePrice,
+            foreignPrice: item.foreignPrice || item.localPrice || item.sellingPrice || item.basePrice,
             category: item.category,
             type: 'food',
             ingredients: item.ingredients || [],

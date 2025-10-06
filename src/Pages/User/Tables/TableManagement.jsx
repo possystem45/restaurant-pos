@@ -42,12 +42,8 @@ export default function TableManagement({tableList = []}) {
     const menuItems = useMemo(() => {
         const foodItems = getTransformedFoodItemsForMenu();
         
-        // Enhanced food items with pricing information
-        const enhancedFoodItems = foodItems.map(item => ({
-            ...item,
-            localPrice: item.localPrice || item.price,
-            foreignPrice: item.foreignPrice || item.price,
-        }));
+        // Food items already have correct pricing from the hook
+        const enhancedFoodItems = foodItems;
         
         // Transform liquor items to match menu format
         const transformedLiquorItems = liquorItems.map(item => {
@@ -134,9 +130,12 @@ export default function TableManagement({tableList = []}) {
                     totalCigarettes: item.type === 'cigarettes' 
                         ? ((item.bottlesInStock || 0) * (item.cigarettesPerPack || 20)) - (item.individualCigaretteSales || 0)
                         : 0,
-                    remainingIndividualCigarettes: item.type === 'cigarettes'
-                        ? (item.individualCigaretteSales || 0)
-                        : 0
+                    // For cigarettes: show remaining cigarettes in the currently opened pack
+                    remainingIndividualCigarettes: item.type === 'cigarettes' && (item.individualCigaretteSales || 0) > 0
+                        ? (item.cigarettesPerPack || 20) - (item.individualCigaretteSales || 0)
+                        : 0,
+                    // Also track cigarettes sold from opened pack for admin view
+                    soldFromOpenedPack: item.type === 'cigarettes' ? (item.individualCigaretteSales || 0) : 0
                 },
                 isAvailable: (item.bottlesInStock || 0) > 0
             };
@@ -504,7 +503,9 @@ export default function TableManagement({tableList = []}) {
                         isFullBottle: item.id?.includes('_full') || item.isFullBottle,
                         // For cigarettes, check if individual sale
                         isIndividual: item.id?.includes('_individual') || 
-                                    (item.type === 'cigarettes' && item.price !== item.pricePerBottle && !item.id?.includes('_pack'))
+                                    (item.type === 'cigarettes' && 
+                                     item.price === item.pricePerBottle && 
+                                     !item.id?.includes('_pack'))
                     };
                     
 

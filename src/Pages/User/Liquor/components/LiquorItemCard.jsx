@@ -167,8 +167,21 @@ const LiquorItemCard = React.memo(({
                             </div>
                             <div>
                                 <div className="text-sm text-gray-600">Individual Price</div>
-                                <div className="text-lg font-semibold text-green-600">
-                                    LKR {item.cigaretteIndividualPrice ? Number(item.cigaretteIndividualPrice).toFixed(2) : 'N/A'}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between gap-2">
+                                        <div className="text-xs">
+                                            <div className="text-xs text-gray-500">Local</div>
+                                            <div className="text-sm font-bold text-blue-600">
+                                                LKR {item.cigaretteLocalPrice ? Number(item.cigaretteLocalPrice).toFixed(2) : 'N/A'}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs">
+                                            <div className="text-xs text-gray-500">Foreign</div>
+                                            <div className="text-sm font-bold text-green-600">
+                                                LKR {item.cigaretteForeignPrice ? Number(item.cigaretteForeignPrice).toFixed(2) : 'N/A'}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -184,6 +197,11 @@ const LiquorItemCard = React.memo(({
                                 <div className="text-md font-semibold text-blue-600">
                                     {item.individualCigaretteSales || 0} pieces
                                 </div>
+                                {(item.individualCigaretteSales || 0) > 0 && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {(item.cigarettesPerPack || 20) - (item.individualCigaretteSales || 0)} remaining in opened pack
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

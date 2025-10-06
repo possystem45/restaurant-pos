@@ -40,9 +40,11 @@ const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem
     // Function to get cigarette individual price based on customer type
     const getCigaretteIndividualPrice = () => {
         if (customerType === 'foreign') {
-            return item.cigaretteForeignPrice || item.cigaretteLocalPrice || item.cigaretteIndividualPrice;
+            const price = item.cigaretteForeignPrice || item.cigaretteLocalPrice || item.cigaretteIndividualPrice || 0;
+            return price;
         } else {
-            return item.cigaretteLocalPrice || item.cigaretteIndividualPrice;
+            const price = item.cigaretteLocalPrice || item.cigaretteIndividualPrice || 0;
+            return price;
         }
     };
 
@@ -193,11 +195,12 @@ const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem
                 // For cigarettes, show detailed stock info including individual cigarettes
                 const packs = item.stock.bottlesInStock || 0;
                 const totalCigarettes = item.stock.totalCigarettes || 0;
-                const soldFromOpenedPack = item.stock.remainingIndividualCigarettes || 0;
+                const remainingInOpenedPack = item.stock.remainingIndividualCigarettes || 0;
+                const soldFromOpenedPack = item.stock.soldFromOpenedPack || 0;
                 
-                let stockInfo = `${packs} packs (${totalCigarettes} remaining)`;
+                let stockInfo = `${packs} packs (${totalCigarettes} total cigarettes)`;
                 if (soldFromOpenedPack > 0) {
-                    stockInfo += `, ${soldFromOpenedPack} sold from opened pack`;
+                    stockInfo += `, ${remainingInOpenedPack} remaining in opened pack`;
                 }
                 return stockInfo;
             } else if (isHardLiquor && ml > 0) {
@@ -417,7 +420,7 @@ const MenuItem = memo(function MenuItem({item, customerType = 'local', onAddItem
                             </button>
 
                             {/* Individual Option with Quantity Controls */}
-                            {getCigaretteIndividualPrice() && (
+                            {(getCigaretteIndividualPrice() > 0) && (
                                 <div className="border border-gray-200 rounded-lg p-4">
                                     <div className="mb-3">
                                         <span className="font-medium text-other1">Individual Cigarettes</span>

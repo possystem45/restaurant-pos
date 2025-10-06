@@ -48,6 +48,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
     customBottleVolume: '', // For custom bottle volume input
     // Cigarette-specific fields
     cigaretteIndividualPrice: '',
+    cigaretteLocalPrice: '',
+    cigaretteForeignPrice: '',
     cigarettesPerPack: '20',
     // Bites-specific fields with dual pricing - initialize as empty to ensure independent values
     localPricePerPlate: '',
@@ -77,6 +79,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         customBottleVolume: '',
         // Cigarette-specific fields
         cigaretteIndividualPrice: (item.cigaretteIndividualPrice || '').toString(),
+        cigaretteLocalPrice: (item.cigaretteLocalPrice || item.cigaretteIndividualPrice || '').toString(),
+        cigaretteForeignPrice: (item.cigaretteForeignPrice || item.cigaretteIndividualPrice || '').toString(),
         cigarettesPerPack: (item.cigarettesPerPack || 20).toString(),
         // Bites-specific fields with dual pricing - only fallback to pricePerPlate if neither dual price exists
         localPricePerPlate: (item.localPricePerPlate || (item.foreignPricePerPlate ? '' : item.pricePerPlate) || '').toString(),
@@ -174,8 +178,12 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
 
     // Cigarette-specific validations
     if (isCigarettes()) {
-      if (!formData.cigaretteIndividualPrice || parseFloat(formData.cigaretteIndividualPrice) <= 0) {
-        newErrors.cigaretteIndividualPrice = 'Individual cigarette price is required';
+      if (!formData.cigaretteLocalPrice || parseFloat(formData.cigaretteLocalPrice) <= 0) {
+        newErrors.cigaretteLocalPrice = 'Local individual cigarette price is required';
+      }
+
+      if (!formData.cigaretteForeignPrice || parseFloat(formData.cigaretteForeignPrice) <= 0) {
+        newErrors.cigaretteForeignPrice = 'Foreign individual cigarette price is required';
       }
 
       if (!formData.cigarettesPerPack || parseInt(formData.cigarettesPerPack) < 1) {
@@ -224,6 +232,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
       'alcoholPercentage', 
       'customBottleVolume', 
       'cigaretteIndividualPrice', 
+      'cigaretteLocalPrice',
+      'cigaretteForeignPrice',
       'cigarettesPerPack', 
       'pricePerPlate',
       // Dual pricing fields for portions schema
@@ -280,6 +290,8 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
         bottleVolume: needsBottleVolume() ? finalBottleVolume : undefined,
         alcoholPercentage: isHardLiquor() && formData.alcoholPercentage ? parseFloat(formData.alcoholPercentage) : undefined,
         cigaretteIndividualPrice: isCigarettes() && formData.cigaretteIndividualPrice ? parseFloat(formData.cigaretteIndividualPrice) : undefined,
+        cigaretteLocalPrice: isCigarettes() && formData.cigaretteLocalPrice ? parseFloat(formData.cigaretteLocalPrice) : undefined,
+        cigaretteForeignPrice: isCigarettes() && formData.cigaretteForeignPrice ? parseFloat(formData.cigaretteForeignPrice) : undefined,
         cigarettesPerPack: isCigarettes() && formData.cigarettesPerPack ? parseInt(formData.cigarettesPerPack) : undefined
       };
 
@@ -473,7 +485,7 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                   <div className="flex items-center gap-2 mb-3">
                     <h5 className="font-semibold text-blue-800">Cigarette Configuration</h5>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <InputField
                       label="Cigarettes per Pack"
                       id="cigarettesPerPack"
@@ -485,38 +497,48 @@ export default function LiquorStockForm({ item, onSubmit, onCancel }) {
                       required
                     />
                     <InputField
-                      label="Individual Cigarette Price"
-                      id="cigaretteIndividualPrice"
+                      label="Local Individual Cigarette Price"
+                      id="cigaretteLocalPrice"
                       type="text"
-                      value={formData.cigaretteIndividualPrice}
-                      onChange={(e) => handleInputChange('cigaretteIndividualPrice', e.target.value)}
+                      value={formData.cigaretteLocalPrice}
+                      onChange={(e) => handleInputChange('cigaretteLocalPrice', e.target.value)}
                       placeholder="e.g., 2.75"
-                      error={errors.cigaretteIndividualPrice}
+                      error={errors.cigaretteLocalPrice}
+                      required
+                    />
+                    <InputField
+                      label="Foreign Individual Cigarette Price"
+                      id="cigaretteForeignPrice"
+                      type="text"
+                      value={formData.cigaretteForeignPrice}
+                      onChange={(e) => handleInputChange('cigaretteForeignPrice', e.target.value)}
+                      placeholder="e.g., 3.25"
+                      error={errors.cigaretteForeignPrice}
                       required
                     />
                   </div>
                   
                   {/* Show pricing comparison */}
-                  {formData.pricePerBottle && formData.cigaretteIndividualPrice && formData.cigarettesPerPack && (
+                  {formData.localPrice && formData.cigaretteLocalPrice && formData.cigarettesPerPack && (
                     <div className="mt-3 p-3 bg-white border border-blue-200 rounded-lg">
                       <div className="text-sm text-blue-700">
                         <div className="flex justify-between items-center">
-                          <span>Pack price per cigarette:</span>
+                          <span>Local pack price per cigarette:</span>
                           <span className="font-semibold">
-                            LKR {(parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack)).toFixed(2)}
+                            LKR {(parseFloat(formData.localPrice) / parseInt(formData.cigarettesPerPack)).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span>Individual cigarette price:</span>
-                          <span className="font-semibold">LKR {parseFloat(formData.cigaretteIndividualPrice).toFixed(2)}</span>
+                          <span>Local individual cigarette price:</span>
+                          <span className="font-semibold">LKR {parseFloat(formData.cigaretteLocalPrice).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-blue-200">
-                          <span>Individual markup:</span>
+                          <span>Individual markup (local):</span>
                           <span className={`font-semibold ${
-                            parseFloat(formData.cigaretteIndividualPrice) > (parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack))
+                            parseFloat(formData.cigaretteLocalPrice) > (parseFloat(formData.localPrice) / parseInt(formData.cigarettesPerPack))
                               ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {(((parseFloat(formData.cigaretteIndividualPrice) / (parseFloat(formData.pricePerBottle) / parseInt(formData.cigarettesPerPack))) - 1) * 100).toFixed(1)}%
+                            {(((parseFloat(formData.cigaretteLocalPrice) / (parseFloat(formData.localPrice) / parseInt(formData.cigarettesPerPack))) - 1) * 100).toFixed(1)}%
                           </span>
                         </div>
                       </div>
